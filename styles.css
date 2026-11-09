@@ -22,6 +22,7 @@
   --tier-hardcore: #a04a00;
   --tier-extreme: #9c2323;
   --shadow: 0 3px 0 rgba(70, 50, 20, 0.18);
+  --icon-bg: #efe2c3;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -47,6 +48,7 @@
     --tier-hardcore: #ffb169;
     --tier-extreme: #ff9c8f;
     --shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+    --icon-bg: #7a6a50;
   }
 }
 
@@ -162,8 +164,9 @@ legend { font-weight: 800; font-size: 1.1rem; padding: 0; margin-bottom: 10px; }
 .badge-tier.tier-extreme { color: var(--tier-extreme); border-color: var(--tier-extreme); }
 
 .challenge-head { display: flex; gap: 14px; align-items: center; margin: 0 0 8px; min-height: 60px; }
-.icon-slot { flex: none; width: 60px; height: 60px; border-radius: 12px; background: var(--chip); border: 2px solid var(--line); display: grid; place-items: center; font-size: 1.8rem; line-height: 1; }
+.icon-slot { flex: none; width: 60px; height: 60px; border-radius: 12px; background: var(--icon-bg); border: 2px solid var(--line); display: grid; place-items: center; font-size: 1.8rem; line-height: 1; }
 .icon-slot img { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; }
+.icon-slot img.icon-smooth { width: 46px; height: 46px; image-rendering: auto; }
 .die { display: inline-block; }
 .rolling .die { animation: tumble 0.7s cubic-bezier(0.3, 0.6, 0.4, 1); }
 @keyframes tumble { 0% { transform: rotate(0) translateY(0); } 30% { transform: rotate(200deg) translateY(-9px); } 60% { transform: rotate(420deg) translateY(0); } 80% { transform: rotate(520deg) translateY(-4px); } 100% { transform: rotate(720deg) translateY(0); } }

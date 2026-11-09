@@ -141,5 +141,5 @@ Kill speeds, skilling rates and time estimates were written from memory for a ne
 - **Diary laps** use one flat time per difficulty for every area.
 - **Slayer-only bosses** (Cerberus, Kraken, Hydra and so on) appear only in Casual and Standard and are tagged "Needs a Slayer task", since the generator cannot know your current task.
 - Farming is limited to patch runs (herb, tree, fruit tree and so on), where a patch that is still growing counts once visited. There are no Grand Exchange or trading challenges.
-- **Icons**: the three made-up "any piece" items have no icon and show a category symbol. Pet icons use hand-entered wiki file names (`icon_file` in `data/items.json`).
+- **Icons**: the Barrows "any piece" and Dagannoth Rex "any unique" items use images supplied by the repository owner (files ending `-detail.png`, drawn smoothly rather than as pixel sprites). The Noxious halberd piece has no icon because no hunt for it currently fits a tier. Pet icons use hand-entered wiki file names (`icon_file` in `data/items.json`).
 - "No death risk" at Casual means: no Wilderness content, and dying never fails the challenge.

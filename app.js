@@ -756,6 +756,7 @@
     if (!c.icon) { slot.textContent = GLYPHS[c.category]; return; }
     var img = el('img');
     img.alt = ''; img.width = 40; img.height = 40;
+    if (/-detail\.png$/.test(c.icon)) img.className = 'icon-smooth'; // larger render, not a pixel sprite
     img.onerror = function () { slot.textContent = GLYPHS[c.category]; };
     img.src = c.icon;
     slot.appendChild(img);
