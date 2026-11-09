@@ -120,10 +120,10 @@ Things I could not verify from those pages:
 
 ## Assumptions and things to double-check
 
-All gameplay numbers were written from memory for a near-maxed account and are deliberately on the slow side so that targets are reachable. They were **not** checked against the wiki page by page (that would have meant a few hundred requests). Treat them as approximate.
+Kill speeds, skilling rates and time estimates were written from memory for a near-maxed account and are deliberately on the slow side so that targets are reachable. Treat them as approximate.
 
 - **Kills per hour, skilling rates and minigame lengths** are rough estimates.
-- **Drop rates** are the commonly quoted ones. Lower-confidence entries: Dragon warhammer (1/3,000), Glacial temotli (1/100), the Wilderness boss uniques after the 2023 rework, Araxxor uniques (1/600 each), Tormented Demon drops (1/500), and the "any piece" Barrows figure (about 1/15 per chest with all brothers killed).
+- **Drop rates** were checked on 2026-11-09 against the drop tables on the wiki's monster pages (three batched page requests, made by hand). Six were wrong and were corrected: the three Wilderness boss rings (1/512), Monkey tail (1/1,500), Crystal tool seed (about 1/205) and the Noxious halberd pieces (1/200 for whichever piece is next). Not confirmed, because the figures are not on the pages fetched: the Gauntlet and Corrupted Gauntlet seeds and Youngllef, Bran, Blood shard, and the "any piece" Barrows figure (about 1/15 per chest with all brothers killed). Rates are not re-checked by the refresh script.
 - **Tradeability**: an item is marked `tradeable: false` when the price feed had no entry for it on 2026-11-09. That is right for pets and for parts such as Noxious halberd pieces, but an item that is tradeable and simply missing from the feed would be mislabelled (Ancient icon is the one to check).
 - **Sailing** has five activities, with guessed rates.
 - **Newer bosses** (Royal Titans, Yama, Doom of Mokhaiotl, the Hueycoatl, Moons of Peril) have guessed kill speeds.
