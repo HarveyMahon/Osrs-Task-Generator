@@ -335,8 +335,8 @@
       }
     }
     rush(5, 1, 'standard', 50, ['No absorption or overload potions.', 'No overhead protection prayers.']);
-    rush(10, 2, 'hardcore', 95, ['No dream potions (absorption, overload, super ranging, super magic).', 'No prayers at all.']);
-    rush(20, 5, 'extreme', 150, ['No dream potions.', 'No prayers at all.', 'No power-ups.']);
+    rush(10, 2, 'hardcore', 95, ['No dream potions (absorption, overload, super ranging, super magic).']);
+    rush(20, 5, 'extreme', 150, ['No dream potions.', 'No power-ups.']);
 
     var d = q.diaries;
     var combos = [[0], [1], [2], [3], [0, 1], [1, 2], [0, 1, 2]];
