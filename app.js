@@ -238,7 +238,7 @@
             category: 'luck', kind: 'hunt:' + mon.type, tier: tier.id,
             title: drop.item + ' hunt',
             description: 'Get "' + drop.item + '" from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is roughly 1/' + fmtNum(drop.rate) + ', so your odds are about ' + pct + '%.',
-            rules: ['Count attempts from zero, starting now.'].concat(isPet(drop.item) ? ['A duplicate-pet message ("you have a funny feeling like you would have been followed") counts.'] : []),
+            rules: ['Count attempts from zero, starting now.'].concat(isPet(drop.item) ? ['A duplicate-pet message ("you have a funny feeling like you would have been followed") counts.'] : []).concat(drop.note ? [drop.note] : []),
             targetMinutes: c.t, tags: tags, iconItems: [drop.item],
             stake: value ? 'The prize is worth about ' + value + '.' : null,
             success: '"' + drop.item + '" drops on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',

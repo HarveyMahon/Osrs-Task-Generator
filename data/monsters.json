@@ -1,5 +1,5 @@
 {
-  "_note": "Hand-curated. styles = attack styles that work; the first is the usual one, the others are offered as style-only challenges. flag = raid | waves (used by the opt-out toggles). feats = fixed multi-boss tours with a time estimate. perHour = rough kills/completions per hour for a near-maxed player, banking included, rounded down. rate = 1 in N per kill. All figures approximate; see README.",
+  "_note": "Hand-curated. styles = attack styles that work; the first is the usual one, the others are offered as style-only challenges. flag = raid | waves (used by the opt-out toggles). feats = fixed multi-boss tours with a time estimate. perHour = rough kills/completions per hour for a near-maxed player, banking included, rounded down. rate = 1 in N per kill. note = optional extra rule line shown on that drop's hunt. All figures approximate; see README.",
   "monsters": [
     {"name": "Zulrah", "styles": ["magic", "ranged"], "type": "boss", "label": "Zulrah kill", "perHour": 28, "drops": [{"item": "Tanzanite fang", "rate": 1024}, {"item": "Magic fang", "rate": 1024}, {"item": "Serpentine visage", "rate": 1024}, {"item": "Uncut onyx", "rate": 1024}, {"item": "Jar of Swamp", "rate": 3000}, {"item": "Pet snakeling", "rate": 4000}]},
     {"name": "Vorkath", "styles": ["ranged", "melee"], "type": "boss", "label": "Vorkath kill", "perHour": 26, "drops": [{"item": "Vorkath's head", "rate": 50}, {"item": "Dragonbone necklace", "rate": 1000}, {"item": "Jar of Decay", "rate": 3000}, {"item": "Vorki", "rate": 3000}, {"item": "Draconic visage", "rate": 5000}, {"item": "Skeletal visage", "rate": 5000}]},
@@ -42,13 +42,13 @@
     {"name": "Chaos Fanatic", "styles": ["ranged", "melee"], "type": "boss", "label": "Chaos Fanatic kill", "perHour": 65, "wilderness": true, "tags": ["budget"], "drops": [{"item": "Odium shard 1", "rate": 256}, {"item": "Malediction shard 1", "rate": 256}]},
     {"name": "Crazy archaeologist", "styles": ["melee", "ranged"], "type": "boss", "label": "Crazy archaeologist kill", "perHour": 65, "wilderness": true, "tags": ["budget"], "drops": [{"item": "Fedora", "rate": 128}, {"item": "Odium shard 2", "rate": 256}, {"item": "Malediction shard 2", "rate": 256}]},
 
-    {"name": "Royal Titans", "type": "boss", "label": "Royal Titans kill", "perHour": 22, "drops": [{"item": "Bran", "rate": 3000}]},
+    {"name": "Royal Titans", "type": "boss", "label": "Royal Titans kill", "perHour": 22, "drops": [{"item": "Bran", "rate": 3000, "note": "The odds shown assume you keep your loot. Sacrificing it doubles the chance to about 1/1,500, and is allowed."}]},
     {"name": "Yama", "type": "boss", "label": "Yama kill", "perHour": 8, "drops": [{"item": "Yami", "rate": 2500}]},
     {"name": "Doom of Mokhaiotl", "type": "boss", "label": "Doom of Mokhaiotl delve level", "perHour": 12, "drops": []},
     {"name": "The Hueycoatl", "type": "boss", "label": "Hueycoatl kill", "perHour": 8, "team": true, "drops": []},
     {"name": "Moons of Peril", "type": "boss", "label": "Lunar Chest", "perHour": 6, "drops": []},
 
-    {"name": "Corrupted Gauntlet", "type": "raid", "label": "Corrupted Gauntlet completion", "perHour": 5, "drops": [{"item": "Crystal armour seed", "rate": 50}, {"item": "Enhanced crystal weapon seed", "rate": 400}, {"item": "Youngllef", "rate": 800}]},
+    {"name": "Corrupted Gauntlet", "type": "raid", "label": "Corrupted Gauntlet completion", "perHour": 5, "drops": [{"item": "Crystal weapon seed", "rate": 50}, {"item": "Crystal armour seed", "rate": 50}, {"item": "Enhanced crystal weapon seed", "rate": 400}, {"item": "Youngllef", "rate": 800}]},
     {"name": "The Gauntlet", "type": "raid", "label": "Gauntlet completion", "perHour": 5.5, "drops": [{"item": "Crystal weapon seed", "rate": 120}, {"item": "Crystal armour seed", "rate": 120}, {"item": "Youngllef", "rate": 2000}]},
     {"name": "Chambers of Xeric", "flag": "raid", "type": "raid", "label": "Chambers of Xeric raid", "perHour": 2, "drops": []},
     {"name": "Theatre of Blood", "flag": "raid", "type": "raid", "label": "Theatre of Blood raid", "perHour": 2.5, "team": true, "drops": []},
