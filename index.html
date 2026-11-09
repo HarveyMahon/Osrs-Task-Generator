@@ -37,7 +37,7 @@
         <input type="range" id="max-minutes" min="15" max="180" step="5" value="180">
       </div>
       <div class="roll-row">
-        <button type="button" id="generate" class="btn btn-primary" disabled>Generate challenge</button>
+        <button type="button" id="generate" class="btn btn-primary" disabled><span class="die" aria-hidden="true">🎲</span> <span id="generate-label">Generate challenge</span></button>
         <button type="button" id="daily" class="btn" disabled>Daily challenge</button>
         <p id="pool-note" class="muted" aria-live="polite"></p>
       </div>
@@ -55,7 +55,10 @@
 
       <article id="challenge" hidden>
         <ul id="challenge-badges" class="badges" aria-label="Challenge tags"></ul>
-        <h3 id="challenge-title" tabindex="-1"></h3>
+        <div class="challenge-head">
+          <div id="challenge-icon" class="icon-slot" aria-hidden="true"></div>
+          <h3 id="challenge-title" tabindex="-1"></h3>
+        </div>
         <p id="challenge-description" class="lead"></p>
 
         <h4>Rules</h4>
@@ -96,6 +99,7 @@
         </div>
         <div class="tweaks">
           <button type="button" id="copy" class="btn btn-small btn-ghost">Copy as text</button>
+          <button type="button" id="copy-link" class="btn btn-small btn-ghost">Copy link</button>
           <span id="copy-note" class="muted small" role="status" aria-live="polite"></span>
         </div>
 
@@ -116,7 +120,7 @@
       <div class="table-wrap">
         <table>
           <caption class="visually-hidden">Results per intensity tier</caption>
-          <thead><tr><th scope="col">Tier</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Success rate</th></tr></thead>
+          <thead><tr><th scope="col">Tier</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Win rate</th></tr></thead>
           <tbody id="stats-tiers"></tbody>
         </table>
       </div>
@@ -125,7 +129,7 @@
         <div class="table-wrap">
           <table>
             <caption class="visually-hidden">Results per category</caption>
-            <thead><tr><th scope="col">Category</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Success rate</th></tr></thead>
+            <thead><tr><th scope="col">Category</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Win rate</th></tr></thead>
             <tbody id="stats-categories"></tbody>
           </table>
         </div>
@@ -139,7 +143,7 @@
   </main>
 
   <footer class="site-footer">
-    <p><span id="pool-size">0</span> challenges in the pool. Item values are approximate, refreshed <span id="data-date">…</span> from the <a href="https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices">OSRS Wiki real-time prices</a>. Kill speeds, drop rates and time estimates are hand-curated guesses for a near-maxed account.</p>
+    <p><span id="pool-size">0</span> challenges in the pool. Item values are approximate, refreshed <span id="data-date">…</span> from the <a href="https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices">OSRS Wiki real-time prices</a>. Kill speeds and time estimates are hand-curated guesses for a near-maxed account. Item icons are from the OSRS Wiki and are © Jagex Ltd.</p>
     <p>Unofficial fan project. Not affiliated with or endorsed by Jagex. Old School RuneScape is a trademark of Jagex Ltd.</p>
   </footer>
 

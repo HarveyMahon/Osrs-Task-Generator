@@ -164,6 +164,7 @@
               title: fmtNum(c.n) + ' ' + labels + ': ' + mod.name,
               description: 'Rack up ' + fmtNum(c.n) + ' ' + labels + '.',
               rules: mod.rules, targetMinutes: c.t, tags: tags, stake: mod.stake || null,
+              iconItems: mon.drops.map(function (dr) { return dr.item; }),
               success: 'Your kill count or loot tracker shows ' + fmtNum(c.n) + ' new ' + labels + ' since you started, with every rule kept.',
               failure: mod.fail
             });
@@ -238,7 +239,7 @@
             title: drop.item + ' hunt',
             description: 'Get "' + drop.item + '" from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is roughly 1/' + fmtNum(drop.rate) + ', so your odds are about ' + pct + '%.',
             rules: ['Count attempts from zero, starting now.'].concat(isPet(drop.item) ? ['A duplicate-pet message ("you have a funny feeling like you would have been followed") counts.'] : []),
-            targetMinutes: c.t, tags: tags,
+            targetMinutes: c.t, tags: tags, iconItems: [drop.item],
             stake: value ? 'The prize is worth about ' + value + '.' : null,
             success: '"' + drop.item + '" drops on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
             failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without "' + drop.item + '".' + (mon.wilderness ? ' Dying does not reset or pause the count.' : '')
@@ -295,6 +296,7 @@
                 title: sk.skill + ': ' + what.charAt(0).toLowerCase() + what.slice(1) + ' (' + v.name + ')',
                 description: what + '.',
                 rules: v.rules, targetMinutes: c.t, tags: act.wilderness ? ['Wilderness'] : [], stake: stake,
+                iconItems: [act.item, act.consumes],
                 success: 'You have done it: ' + what.charAt(0).toLowerCase() + what.slice(1) + ', counted from when you started.',
                 failure: v.fail
               });
@@ -421,8 +423,12 @@
 
   // ------------------------------------------------------------------ pool
   function buildPool(data) {
-    var values = {}, pets = {};
-    (data.items.items || []).forEach(function (it) { values[it.name] = it.value; if (it.pet) pets[it.name] = true; });
+    var values = {}, pets = {}, icons = {};
+    (data.items.items || []).forEach(function (it) {
+      values[it.name] = it.value;
+      if (it.pet) pets[it.name] = true;
+      if (typeof it.icon === 'string') icons[it.name] = 'data/icons/' + it.icon;
+    });
     var valueOf = function (name) { return values[name] == null ? null : values[name]; };
     var gp = function (name) { return fmtGp(valueOf(name)); };
     var out = [];
@@ -431,13 +437,34 @@
     buildMinigames(data, out);
     buildLuck(data, gp, function (n) { return !!pets[n]; }, out);
     buildQuests(data, out);
-    return out.map(annotate);
+    return out.map(function (c) {
+      var names = (c.iconItems || []).filter(function (n) { return icons[n]; });
+      c.icon = names.length ? icons[names[0]] : null;
+      delete c.iconItems;
+      return annotate(c);
+    });
   }
 
   /* Opt-out flags come from the display tags; "subject" (what you do it to)
    * and "variant" (the rule set) come from the id, and drive lock-and-reroll. */
+  /* Short, stable code for share links: two 32-bit hashes of the id in base 36. */
+  function shortCode(id) {
+    var a = 2166136261, b = 5381;
+    for (var i = 0; i < id.length; i++) {
+      var ch = id.charCodeAt(i);
+      a = Math.imul(a ^ ch, 16777619);
+      b = (Math.imul(b, 33) + ch) | 0;
+    }
+    return (a >>> 0).toString(36) + (b >>> 0).toString(36);
+  }
+  function findByCode(pool, code) {
+    for (var i = 0; i < pool.length; i++) if (pool[i].code === code) return pool[i];
+    return null;
+  }
+
   function annotate(c) {
     var p = c.id.split('|');
+    c.code = shortCode(c.id);
     c.flags = c.tags.map(function (t) { return TAG_FLAGS[t]; }).filter(Boolean);
     if (p[0] === 'combat' && p[1] === 'count') { c.subject = p[2]; c.variant = p[4]; }
     else if (p[0] === 'combat') { c.subject = p[2]; c.variant = p[1]; }
@@ -517,7 +544,7 @@
     return pickFrom(eligible, [], seededRng('daily|' + dateText + '|' + tierId));
   }
 
-  var api = { TIERS: TIERS, CATEGORIES: CATEGORIES, EXCLUDES: EXCLUDES, MAX_MINUTES: MAX_MINUTES, buildPool: buildPool, filterPool: filterPool, pickChallenge: pickChallenge, rerollKeeping: rerollKeeping, dailyChallenge: dailyChallenge, fmtMinutes: fmtMinutes, fmtGp: fmtGp };
+  var api = { TIERS: TIERS, CATEGORIES: CATEGORIES, EXCLUDES: EXCLUDES, MAX_MINUTES: MAX_MINUTES, buildPool: buildPool, filterPool: filterPool, pickChallenge: pickChallenge, rerollKeeping: rerollKeeping, dailyChallenge: dailyChallenge, findByCode: findByCode, fmtMinutes: fmtMinutes, fmtGp: fmtGp };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.OsrsTasks = api;
   if (typeof document === 'undefined') return;
@@ -534,6 +561,8 @@
     luck: ['Going dry builds character.', 'RNG owes you nothing, but ask nicely.', 'It is 50/50: you get it or you do not.', 'Spoon incoming. Probably. Maybe.'],
     quests: ['Spacebar is not a personality.', 'One small favour, they said.', 'Swordfish.', 'The lore was inside you all along.']
   };
+  var GLYPHS = { combat: '\u2694\ufe0f', skilling: '\u26cf\ufe0f', minigames: '\ud83c\udfaa', luck: '\ud83c\udf40', quests: '\ud83d\udcdc' };
+  var ROLL_MS = 700;
   var OUTCOMES = {
     completed: ['Gz! Logged as completed.', 'Nice one. Another for the collection log of life.'],
     failed: ['Sit. Logged as failed.', 'Unlucky. Logged as failed. It happens to the best of us.'],
@@ -607,6 +636,9 @@
   var current = null;      // challenge on screen
   var currentDaily = null; // UTC date if the challenge on screen is a daily
   var resolved = false;    // has it been marked completed/failed?
+  var currentShared = false; // opened from someone's link
+  var rolling = false;     // roll animation in progress
+  var linkNote = '';       // message when a shared link could not be opened
   var recent = [];         // ids shown recently, newest last
   var timer = { running: false, startedAt: 0, elapsed: 0, handle: null };
 
@@ -666,7 +698,7 @@
   function updateGenerateState() {
     var settings = readSettings();
     var count = pool.length ? filterPool(pool, settings).length : 0;
-    $('generate').disabled = count === 0;
+    $('generate').disabled = count === 0 || rolling;
     var note = $('pool-note');
     if (!pool.length) note.textContent = '';
     else if (!settings.categories.length) note.textContent = 'Tick at least one category to roll a challenge.';
@@ -674,13 +706,13 @@
     else note.textContent = fmtNum(count) + ' possible challenges with these settings.';
     var tier = byId(TIERS, settings.tier);
     var done = store.daily.results[settings.tier];
-    $('daily').disabled = !pool.length;
+    $('daily').disabled = !pool.length || rolling;
     $('daily').textContent = 'Daily ' + tier.label + ' challenge' + (done ? ' (' + RESULT_LABEL[done].toLowerCase() + ')' : '');
     updateRerollState();
   }
 
   function updateRerollState() {
-    var usable = !!current && !resolved && !currentDaily;
+    var usable = !!current && !resolved && !currentDaily && !rolling;
     var settings = readSettings();
     if (current) settings.tier = current.tier;
     ['subject', 'variant'].forEach(function (keep) {
@@ -718,19 +750,37 @@
     $('timer-note').textContent = over ? 'Past the target. That is fine: it is a target, not a rule.' : 'Optional. It never ends the challenge for you.';
   }
 
+  function setIcon(c) {
+    var slot = $('challenge-icon');
+    slot.textContent = '';
+    if (!c.icon) { slot.textContent = GLYPHS[c.category]; return; }
+    var img = el('img');
+    img.alt = ''; img.width = 40; img.height = 40;
+    img.onerror = function () { slot.textContent = GLYPHS[c.category]; };
+    img.src = c.icon;
+    slot.appendChild(img);
+  }
+
+  function setHash(fragment) {
+    try { root.history.replaceState(null, '', fragment ? '#' + fragment : root.location.pathname + root.location.search); } catch (e) { /* not essential */ }
+  }
+  function fragmentFor(c, daily) { return daily ? 'daily-' + daily + '-' + c.tier : 'c-' + c.code; }
+
   function renderChallenge(c, opts) {
     opts = opts || {};
-    current = c; currentDaily = opts.daily || null; resolved = false;
+    current = c; currentDaily = opts.daily || null; currentShared = !!opts.shared; resolved = false;
     $('empty-state').hidden = true;
     $('challenge').hidden = false;
     var tier = byId(TIERS, c.tier), cat = byId(CATEGORIES, c.category);
     var badges = $('challenge-badges');
     badges.textContent = '';
-    if (currentDaily) badges.appendChild(el('li', 'badge badge-daily', 'Daily · ' + currentDaily));
+    if (currentShared) badges.appendChild(el('li', 'badge badge-daily', opts.sharedLabel || 'Shared challenge'));
+    if (currentDaily) badges.appendChild(el('li', 'badge badge-daily', 'Daily \u00b7 ' + currentDaily));
     badges.appendChild(el('li', 'badge badge-tier tier-' + tier.id, tier.label));
     badges.appendChild(el('li', 'badge', cat.label));
     c.tags.forEach(function (t) { badges.appendChild(el('li', 'badge badge-soft', t)); });
     $('challenge-title').textContent = c.title;
+    setIcon(c);
     $('challenge-description').textContent = c.description;
     var rules = $('challenge-rules');
     rules.textContent = '';
@@ -741,9 +791,11 @@
     $('stake-row').hidden = !c.stake;
     $('challenge-stake').textContent = c.stake || '';
     $('challenge-quip').textContent = sample(QUIPS[c.category]);
-    $('outcome').textContent = '';
+    $('outcome').textContent = opts.note || '';
+    $('copy-note').textContent = '';
     setActionsEnabled(true);
-    $('generate').textContent = 'Roll a different one';
+    $('generate-label').textContent = 'Roll a different one';
+    setHash(fragmentFor(c, currentDaily));
     resetTimer();
     store.current = c.id;
     store.currentDaily = currentDaily;
@@ -762,26 +814,88 @@
     ['mark-completed', 'mark-failed', 'mark-skipped'].forEach(function (id) { $(id).disabled = !on; });
   }
 
+  function reducedMotion() {
+    try { return root.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  }
+
+  /* Show a challenge. With opts.animate the die tumbles and the title flicks
+   * through other candidates for a moment first; skipped for reduced motion. */
   function show(c, opts) {
-    if (!c) return;
+    if (!c || rolling) return;
+    opts = opts || { focus: true };
     recent.push(c.id);
     if (recent.length > 12) recent.shift();
-    renderChallenge(c, opts || { focus: true });
+    if (!opts.animate || reducedMotion()) { renderChallenge(c, opts); return; }
+    rolling = true;
+    var card = $('challenge'), btn = $('generate');
+    var flick = pool.filter(function (x) { return x.tier === c.tier; });
+    $('empty-state').hidden = true;
+    card.hidden = false;
+    card.classList.remove('reveal');
+    card.classList.add('spinning');
+    btn.classList.add('rolling');
+    setActionsEnabled(false);
+    updateGenerateState();
+    var spin = setInterval(function () {
+      var x = sample(flick);
+      $('challenge-title').textContent = x.title;
+      setIcon(x);
+    }, 90);
+    setTimeout(function () {
+      clearInterval(spin);
+      rolling = false;
+      card.classList.remove('spinning');
+      btn.classList.remove('rolling');
+      renderChallenge(c, opts);
+      card.classList.add('reveal');
+      updateGenerateState();
+    }, ROLL_MS);
   }
-  function roll() { show(pickChallenge(pool, readSettings(), recent)); }
-  function rollDaily() {
-    if (store.daily.date !== todayUtc()) store.daily = { date: todayUtc(), results: {} };
-    show(dailyChallenge(pool, readSettings().tier, todayUtc()), { focus: true, daily: todayUtc() });
+  function roll(note) {
+    var c = pickChallenge(pool, readSettings(), recent);
+    show(c, { focus: true, animate: true, note: typeof note === 'string' ? note : '' });
+    return c;
+  }
+  function rollDaily(tierId) {
+    var today = todayUtc();
+    if (store.daily.date !== today) store.daily = { date: today, results: {} };
+    show(dailyChallenge(pool, typeof tierId === 'string' ? tierId : readSettings().tier, today), { focus: true, daily: today, animate: true });
   }
   function reroll(keep) {
-    if (!current || resolved || currentDaily) return;
+    if (!current || resolved || currentDaily || rolling) return;
     var settings = readSettings();
     settings.tier = current.tier;
-    show(rerollKeeping(pool, settings, current, keep));
+    show(rerollKeeping(pool, settings, current, keep), { focus: true, animate: true });
+  }
+
+  /* Links: #c-<code> is one challenge, #daily-<date>-<tier> is a daily. */
+  function openFromHash() {
+    var hash = root.location.hash || '';
+    linkNote = '';
+    var one = /^#c-([a-z0-9]+)$/.exec(hash);
+    var day = /^#daily-(\d{4}-\d{2}-\d{2})-([a-z]+)$/.exec(hash);
+    if (!one && !day) return false;
+    var c = null, opts = { focus: false };
+    if (one) {
+      c = findByCode(pool, one[1]);
+      opts.shared = !!c && c.id !== store.current;
+      if (c && c.id === store.current) opts.daily = store.currentDaily;
+    } else if (TIER_ORDER.hasOwnProperty(day[2])) {
+      if (day[1] === todayUtc()) { rollDaily(day[2]); return true; }
+      c = dailyChallenge(pool, day[2], day[1]);
+      opts.shared = true; opts.sharedLabel = 'Daily of ' + day[1];
+    }
+    if (!c) {
+      setHash('');
+      linkNote = 'That shared challenge no longer exists (the challenge data has changed since the link was made). Roll a fresh one instead.';
+      return false;
+    }
+    show(c, opts);
+    return true;
   }
 
   function record(result) {
-    if (!current || resolved) return;
+    if (!current || resolved || rolling) return;
     store.stats.tiers[current.tier][result]++;
     store.stats.categories[current.category][result]++;
     store.history.unshift({ title: current.title, tier: current.tier, category: current.category, result: result, at: new Date().toISOString(), daily: !!currentDaily });
@@ -797,16 +911,16 @@
     renderStats();
     var message = sample(OUTCOMES[result]) + (saved ? '' : ' (Your browser is not letting us save stats, so this only lasts until you close the tab.)');
     if (result === 'skipped') {
-      roll();
+      if (!roll(message + ' Here is a fresh one.')) { $('outcome').textContent = message; setHash(''); }
       updateGenerateState();
-      $('outcome').textContent = message + (current ? ' Here is a fresh one.' : '');
       return;
     }
+    setHash('');
     resolved = true;
     setTimerRunning(false);
     setActionsEnabled(false);
     $('outcome').textContent = message;
-    $('generate').textContent = 'Roll again';
+    $('generate-label').textContent = 'Roll again';
     updateGenerateState();
     $('generate').focus();
   }
@@ -822,9 +936,15 @@
     return lines.join('\n');
   }
   function copyChallenge() {
+    if (current) copyText(challengeText(current), 'Copied. Paste it wherever your friends can judge you.', 'Could not copy automatically. Select the text on the card instead.');
+  }
+  function copyLink() {
     if (!current) return;
-    var text = challengeText(current);
-    var done = function (ok) { $('copy-note').textContent = ok ? 'Copied. Paste it wherever your friends can judge you.' : 'Could not copy automatically. Select the text on the card instead.'; };
+    var url = root.location.origin + root.location.pathname + '#' + fragmentFor(current, currentDaily);
+    copyText(url, 'Link copied. Anyone who opens it gets this exact challenge.', 'Could not copy automatically. Copy the address from your browser instead.');
+  }
+  function copyText(text, okMessage, failMessage) {
+    var done = function (ok) { $('copy-note').textContent = ok ? okMessage : failMessage; };
     var fallback = function () {
       try {
         var area = el('textarea');
@@ -901,11 +1021,15 @@
     renderControls();
     renderStats();
     renderTimer();
-    $('generate').addEventListener('click', roll);
-    $('daily').addEventListener('click', rollDaily);
+    $('generate').addEventListener('click', function () { roll(); });
+    $('daily').addEventListener('click', function () { rollDaily(); });
     $('reroll-subject').addEventListener('click', function () { reroll('subject'); });
     $('reroll-variant').addEventListener('click', function () { reroll('variant'); });
     $('copy').addEventListener('click', copyChallenge);
+    $('copy-link').addEventListener('click', copyLink);
+    root.addEventListener('hashchange', function () {
+      if (pool.length && !openFromHash() && linkNote) $('outcome').textContent = linkNote;
+    });
     $('mark-completed').addEventListener('click', function () { record('completed'); });
     $('mark-failed').addEventListener('click', function () { record('failed'); });
     $('mark-skipped').addEventListener('click', function () { record('skipped'); });
@@ -918,9 +1042,10 @@
       $('data-date').textContent = data.meta && data.meta.fetched_date ? data.meta.fetched_date : 'unknown date';
       $('pool-size').textContent = fmtNum(pool.length);
       $('load-status').hidden = true;
-      if (store.current) {
-        var saved = byId(pool, store.current);
-        if (saved) { recent.push(saved.id); renderChallenge(saved, { daily: store.currentDaily }); }
+      if (!openFromHash()) {
+        var saved = store.current ? byId(pool, store.current) : null;
+        if (saved) show(saved, { daily: store.currentDaily, note: linkNote });
+        else if (linkNote) $('outcome').textContent = linkNote;
       }
       updateGenerateState();
     }).catch(function (err) {

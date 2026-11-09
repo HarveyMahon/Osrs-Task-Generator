@@ -119,6 +119,18 @@ for (const t of gen.TIERS) {
   }
   if (days.size < 20) problems.push(`daily repeats too often in ${t.id} (${days.size} distinct in 28 days)`);
 }
+// 6. Share codes are unique and round-trip; every referenced icon file exists.
+const codes = new Map();
+for (const c of pool) {
+  if (codes.has(c.code)) problems.push(`share code collision: ${c.id} / ${codes.get(c.code)}`);
+  codes.set(c.code, c.id);
+  if (!/^[a-z0-9]+$/.test(c.code) || gen.findByCode(pool, c.code) !== c) problems.push(`bad share code for ${c.id}`);
+  if (c.icon && !fs.existsSync(path.join(__dirname, '..', c.icon))) problems.push(`missing icon file ${c.icon}`);
+}
+const iconFiles = fs.existsSync(path.join(dir, 'icons')) ? fs.readdirSync(path.join(dir, 'icons')) : [];
+const used = new Set(data.items.items.map((i) => i.icon).filter(Boolean));
+for (const f of iconFiles) if (!used.has(f)) problems.push(`orphan icon file ${f}`);
+console.log(`Share codes unique; ${pool.filter((c) => c.icon).length} challenges have an icon (${iconFiles.length} files).`);
 console.log('Opt-out, time-limit, reroll and daily checks done.');
 
 if (problems.length) {

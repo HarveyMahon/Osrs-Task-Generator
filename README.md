@@ -28,6 +28,7 @@ To host it, enable GitHub Pages for the repository (deploy from the default bran
 | `data/minigames.json` | Minigames and activities with rough completions per hour. Hand-curated. |
 | `data/quests.json` | Quests available on Quest Speedrunning worlds with their trophy times, Nightmare Zone quest bosses, diary areas. Hand-curated. |
 | `data/items.json` | Every item the other files mention. `id` and `value` are filled in by the refresh script. |
+| `data/icons/` | Item inventory icons, downloaded once by the refresh script. |
 | `data/meta.json` | When and how the item values were last fetched. |
 | `scripts/update_data.py` | Refreshes `items.json` and `meta.json` from the OSRS Wiki. |
 | `scripts/fixtures/` | Small recorded API responses for testing the refresh script without the network. |
@@ -54,6 +55,9 @@ Beyond tier and category, the player can:
 - **Lock and reroll**: keep the target and change the rules, or keep the rules and change the target.
 - **Roll the daily challenge**: one per tier per UTC day, the same for everyone. It is picked with a random number generator seeded from the date and tier, from a pool that excludes anything needing a Slayer task. It ignores the player's category and opt-out settings so that everyone gets the same one. Because the pick depends on the pool, changing the data files changes that day's daily.
 - **Copy the challenge as text** for pasting into chat.
+- **Copy a link** to the exact challenge. The link ends in `#c-<code>`, where the code is a short hash of the challenge's ID; a daily link ends in `#daily-<date>-<tier>`. Opening a link shows that challenge whatever the visitor's settings are, and results go into the visitor's own stats. Nothing is sent anywhere. A link stops working if the challenge it points to is later changed or removed (for example a kill-speed edit that changes the count); the page then says so and offers a fresh roll.
+
+Rolling plays a short dice animation (skipped when the device asks for reduced motion), and challenges show an item icon where one makes sense: the drop being hunted, a boss's signature drop, or the item a skilling activity produces or uses. Everything else shows a category symbol.
 
 Rolling picks a category first, then a "kind" inside it (for example one boss), then a challenge, so large groups do not drown small ones. The last 12 challenges shown are avoided, and the same challenge is never shown twice in a row.
 
@@ -63,7 +67,7 @@ The pool currently holds about 3,600 distinct challenges. Run the checks with:
 node scripts/check_generator.js
 ```
 
-It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, and it rolls 48,000 challenges the way the UI does.
+It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, that share codes are unique and every referenced icon file exists, and it rolls 48,000 challenges the way the UI does.
 
 Stats (completed, failed and skipped, with a success rate, per tier and per category), the current and best completion streak, the last 50 results, today's daily results and your settings are kept in `localStorage`. Every read and write is wrapped in `try/catch`; if storage is blocked the site still works and simply tells you the stats will not persist.
 
@@ -76,10 +80,11 @@ python3 scripts/update_data.py
 The script uses only the Python standard library. It:
 
 1. Prints a "started" line before doing anything else.
-2. Reads `data/items.json`. If every tradeable item already has an id it skips `/mapping` entirely.
+2. Reads `data/items.json`. If every tradeable item already has an id and every item's icon has been checked, it skips `/mapping` entirely.
 3. Makes **one** request to `/latest`, which returns prices for all items at once, and never uses the per-item `id` parameter.
 4. Sets each item's `value` to the mean of the latest instant-buy and instant-sell price, rounded to 3 significant figures.
-5. Writes `data/items.json` and `data/meta.json` (with the fetch date) atomically.
+5. Downloads the inventory icon for any item it has not checked before into `data/icons/` (see below).
+6. Writes `data/items.json` and `data/meta.json` (with the fetch date) atomically.
 
 Other behaviour:
 
@@ -88,7 +93,9 @@ Other behaviour:
 - On any failure (no network, bad JSON, an unexpected shape, fewer than half the items priced) it prints the reason, leaves `data/` untouched and exits with status 1.
 - Items missing from the price feed keep their previous value and are listed in `meta.json`.
 
-Useful flags: `--offline` (cache only, no requests), `--fixtures scripts/fixtures` (use the recorded sample responses), `--remap` (look every id up again; needed after you add an item by hand with `"id": null`).
+Icons are fetched once per item, ever. For items not yet checked, the script asks the wiki which image files exist in batches of 50 names per request, then downloads each existing icon with a 1 second pause. An item then carries `"icon": "<file>"`, or `"icon": false` if the wiki has no image under the expected name, and is never asked about again. The first run for the current 210 items took about 195 requests; a normal weekly run makes none for icons. To retry an item, delete its `icon` field. To supply an icon by hand, put a PNG in `data/icons/` and set the field to its file name. If the icon step fails part-way, prices are still written and the remaining icons are retried next run.
+
+Useful flags: `--skip-icons` (prices only), `--offline` (cache only, no requests), `--fixtures scripts/fixtures` (use the recorded sample responses), `--remap` (look every id up again; needed after you add an item by hand with `"id": null`).
 
 To add an item, add a line to `data/items.json` with its exact wiki name, `"id": null`, `"tradeable": true`, `"value": null`, and run the script.
 
@@ -115,6 +122,7 @@ The usage rules were read on 2026-11-09 from [RuneScape:Real-time Prices](https:
 Things I could not verify from those pages:
 
 - **Conditional requests are not documented.** The API does return `ETag` headers, and a request with `If-None-Match` returned `304 Not Modified` when tested on 2026-11-09, but this is observed behaviour, not a documented guarantee. If it stops working the script simply receives a normal `200`.
+- **No guidance was found on downloading images.** Icons are fetched once each, a second apart, and existence is checked in batches first so that missing files cost no download attempt. The icons are Jagex artwork hosted by the wiki; the site credits both in its footer.
 - **No guidance is given on sleeping between requests or on a preferred time of day.** The 3 second pause and the off-peak cron slot are my own conservative choices.
 - The pages do not state a licence for the price data itself. Wiki content is CC BY-NC-SA 3.0; the site credits the wiki in its footer.
 
@@ -133,4 +141,5 @@ Kill speeds, skilling rates and time estimates were written from memory for a ne
 - **Diary laps** use one flat time per difficulty for every area.
 - **Slayer-only bosses** (Cerberus, Kraken, Hydra and so on) appear only in Casual and Standard and are tagged "Needs a Slayer task", since the generator cannot know your current task.
 - Farming is limited to patch runs (herb, tree, fruit tree and so on), where a patch that is still growing counts once visited. There are no Grand Exchange or trading challenges.
+- **Icons**: 21 of the 210 items have no icon, mostly pets, whose image files on the wiki are not named after the item. Those challenges show a category symbol instead.
 - "No death risk" at Casual means: no Wilderness content, and dying never fails the challenge.

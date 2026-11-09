@@ -4,7 +4,9 @@ real-time prices API, and record the fetch date in data/meta.json.
 
 Design goals (see README.md, "Wiki usage notes"):
   * as few requests as possible: normally ONE request (/latest, all items at
-    once). /mapping is only requested when an item has no id yet or --remap.
+    once). /mapping is only requested when an item has no id or icon yet, or
+    with --remap. Item icons are downloaded once each, the first time an item
+    appears, and never again.
   * a descriptive User-Agent, as the wiki asks.
   * a pause between requests, an on-disk cache, and conditional requests
     (If-None-Match) when a cached copy exists.
@@ -18,9 +20,11 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 USER_AGENT = (
@@ -29,6 +33,11 @@ USER_AGENT = (
     "weekly item-price refresh for a static fan site)"
 )
 BASE_URL = "https://prices.runescape.wiki/api/v2/osrs"
+WIKI_API_URL = "https://oldschool.runescape.wiki/api.php"
+ICON_SLEEP_SECONDS = 1.0
+ICON_MAX_BYTES = 30000
+ICON_MAX_PER_RUN = 300
+ICON_BATCH = 50
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "data")
 CACHE_DIR = os.path.join(ROOT, ".cache", "wiki")
@@ -149,6 +158,18 @@ class Fetcher:
                 time.sleep(RETRY_WAIT_SECONDS)
         raise RefreshError("could not fetch /%s: %s" % (route, last_error))
 
+    def get_bytes(self, url, pause):
+        """One plain GET (no cache, no retry) for the icon step."""
+        if self.requests_made:
+            time.sleep(pause)
+        self.requests_made += 1
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                return response.read()
+        except (urllib.error.URLError, OSError) as exc:
+            raise RefreshError("could not fetch %s: %s" % (url, getattr(exc, "reason", exc)))
+
     @staticmethod
     def _parse(route, body):
         try:
@@ -176,6 +197,74 @@ def price_of(entry):
     return round_value(sum(sides) / len(sides))
 
 
+def slugify(name):
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def fetch_icons(items, mapping, fetcher, icons_dir):
+    """Download each item's inventory icon once and bundle it in data/icons/.
+
+    item["icon"] is a file name once downloaded, False once the wiki has been
+    asked and has no such image, and absent while still unchecked. Only
+    unchecked items cost requests, so a normal weekly run makes none here.
+    File existence is looked up in batches of 50 before anything is downloaded.
+    """
+    todo = [item for item in items if "icon" not in item][:ICON_MAX_PER_RUN]
+    if not todo:
+        log("All item icons already checked: no icon requests.")
+        return
+    log("Fetching icons for %d item(s) (first run only; later runs skip this) ..." % len(todo))
+    icon_names = {m.get("name"): m.get("icon") for m in mapping if isinstance(m, dict)}
+    wanted = {}
+    for item in todo:
+        wanted["File:" + (icon_names.get(item["name"]) or item["name"] + ".png")] = item
+
+    urls = {}
+    titles = sorted(wanted)
+    for start in range(0, len(titles), ICON_BATCH):
+        batch = titles[start:start + ICON_BATCH]
+        query = urllib.parse.urlencode({
+            "action": "query", "prop": "imageinfo", "iiprop": "url|size", "titles": "|".join(batch),
+            "format": "json", "formatversion": "2", "maxlag": "5",
+        })
+        log("  looking up %d image names" % len(batch))
+        try:
+            reply = json.loads(fetcher.get_bytes(WIKI_API_URL + "?" + query, SLEEP_SECONDS).decode("utf-8"))
+            pages = reply["query"]["pages"]
+            renamed = {n["to"]: n["from"] for n in reply["query"].get("normalized", [])}
+        except (ValueError, KeyError, TypeError) as exc:
+            raise RefreshError("unexpected image lookup reply: %s" % exc)
+        for page in pages:
+            title = renamed.get(page.get("title"), page.get("title"))
+            info = (page.get("imageinfo") or [{}])[0]
+            if title in wanted:
+                urls[title] = info.get("url") if info.get("size", 0) <= ICON_MAX_BYTES else None
+
+    os.makedirs(icons_dir, exist_ok=True)
+    saved = missing = 0
+    for title in titles:
+        item = wanted[title]
+        if title not in urls:
+            continue  # the lookup said nothing about it: try again next run
+        if not urls[title]:
+            item["icon"] = False
+            missing += 1
+            continue
+        body = fetcher.get_bytes(urls[title], ICON_SLEEP_SECONDS)
+        if not body.startswith(b"\x89PNG") or len(body) > ICON_MAX_BYTES:
+            item["icon"] = False
+            missing += 1
+            continue
+        name = slugify(item["name"]) + ".png"
+        tmp = os.path.join(icons_dir, name + ".tmp")
+        with open(tmp, "wb") as handle:
+            handle.write(body)
+        os.replace(tmp, os.path.join(icons_dir, name))
+        item["icon"] = name
+        saved += 1
+    log("Icons: %d saved, %d not available on the wiki." % (saved, missing))
+
+
 def format_items(doc):
     lines = ",\n".join("    " + json.dumps(item, ensure_ascii=False) for item in doc["items"])
     note = json.dumps(doc.get("_note", ""), ensure_ascii=False)
@@ -197,7 +286,9 @@ def refresh(args):
     fetcher = Fetcher(args.base_url, args.cache_dir, args.sleep, args.offline, args.fixtures)
 
     unmatched = []
-    if args.remap or any(item.get("id") is None for item in tradeable):
+    mapping = None
+    icons_wanted = not (args.skip_icons or args.offline or args.fixtures) and any("icon" not in item for item in items)
+    if args.remap or icons_wanted or any(item.get("id") is None for item in tradeable):
         log("Resolving item ids via /mapping ...")
         mapping = fetcher.get_json("mapping")
         if not isinstance(mapping, list) or not mapping:
@@ -209,7 +300,7 @@ def refresh(args):
             else:
                 unmatched.append(item["name"])
     else:
-        log("All tradeable items already have ids: skipping /mapping.")
+        log("All tradeable items already have ids and icons: skipping /mapping.")
 
     log("Fetching latest prices via /latest (one request for all items) ...")
     latest = fetcher.get_json("latest")
@@ -232,11 +323,18 @@ def refresh(args):
             % (priced, len(tradeable))
         )
 
+    if icons_wanted:
+        try:
+            fetch_icons(items, mapping, fetcher, os.path.join(args.data_dir, "icons"))
+        except RefreshError as exc:
+            # Prices are still good; icons already saved are kept and the rest retried next run.
+            log("  icon step stopped early (%s); continuing with prices." % exc)
+
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     doc["_note"] = (
         "Item list is hand-curated; id and value are filled in by scripts/update_data.py. "
         "value = approximate gp (mean of latest instant-buy and instant-sell, 3 significant figures). "
-        "tradeable=false items are never priced."
+        "tradeable=false items are never priced. icon = file in data/icons/, or false if the wiki has no icon for it."
     )
     meta = {
         "fetched_at": now.isoformat().replace("+00:00", "Z"),
@@ -246,6 +344,7 @@ def refresh(args):
         "requests_made": fetcher.requests_made,
         "items_tracked": len(items),
         "items_priced": priced,
+        "icons_bundled": sum(1 for item in items if item.get("icon")),
         "items_without_price": kept,
         "items_not_in_mapping": unmatched,
         "user_agent": USER_AGENT,
@@ -271,6 +370,7 @@ def main(argv=None):
     parser.add_argument("--base-url", default=BASE_URL, help="prices API base URL")
     parser.add_argument("--sleep", type=float, default=SLEEP_SECONDS, help="seconds to wait between requests")
     parser.add_argument("--remap", action="store_true", help="re-resolve every item id via /mapping")
+    parser.add_argument("--skip-icons", action="store_true", help="do not look up or download missing item icons")
     parser.add_argument("--offline", action="store_true", help="make no requests; use cached responses only")
     parser.add_argument("--fixtures", metavar="DIR", help="read mapping.json / latest.json from DIR instead of the network")
     args = parser.parse_args(argv)
