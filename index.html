@@ -28,10 +28,20 @@
         <legend>2. What's on the menu?</legend>
         <div id="category-options" class="choices"></div>
       </fieldset>
+      <fieldset>
+        <legend>3. Anything to leave out? <span class="legend-hint">(optional)</span></legend>
+        <div id="exclude-options" class="choices choices-compact"></div>
+      </fieldset>
+      <div class="slider-row">
+        <label for="max-minutes">4. Time I've got: <output id="max-minutes-readout" for="max-minutes">3 h (no limit)</output></label>
+        <input type="range" id="max-minutes" min="15" max="180" step="5" value="180">
+      </div>
       <div class="roll-row">
         <button type="button" id="generate" class="btn btn-primary" disabled>Generate challenge</button>
+        <button type="button" id="daily" class="btn" disabled>Daily challenge</button>
         <p id="pool-note" class="muted" aria-live="polite"></p>
       </div>
+      <p class="muted small">The daily is the same for everyone, one per tier, and changes at midnight UTC. It ignores your category and opt-out settings.</p>
       <p id="load-status" class="notice" role="status">Loading challenge data…</p>
     </form>
 
@@ -79,6 +89,16 @@
           <span id="timer-note" class="muted timer-note"></span>
         </div>
 
+        <div class="tweaks" id="reroll-row" role="group" aria-label="Adjust this challenge">
+          <span class="muted small">Nearly right?</span>
+          <button type="button" id="reroll-subject" class="btn btn-small btn-ghost">Same target, new rules</button>
+          <button type="button" id="reroll-variant" class="btn btn-small btn-ghost">Same rules, new target</button>
+        </div>
+        <div class="tweaks">
+          <button type="button" id="copy" class="btn btn-small btn-ghost">Copy as text</button>
+          <span id="copy-note" class="muted small" role="status" aria-live="polite"></span>
+        </div>
+
         <div class="actions" role="group" aria-label="How did it go?">
           <button type="button" id="mark-completed" class="btn btn-good">Completed</button>
           <button type="button" id="mark-failed" class="btn btn-bad">Failed</button>
@@ -92,10 +112,11 @@
     <section class="card" aria-labelledby="stats-heading">
       <h2 id="stats-heading">Your record</h2>
       <p class="muted"><span id="stats-summary"></span>. Saved in this browser only.</p>
+      <p id="streak"></p>
       <div class="table-wrap">
         <table>
           <caption class="visually-hidden">Results per intensity tier</caption>
-          <thead><tr><th scope="col">Tier</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th></tr></thead>
+          <thead><tr><th scope="col">Tier</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Success rate</th></tr></thead>
           <tbody id="stats-tiers"></tbody>
         </table>
       </div>
@@ -104,10 +125,14 @@
         <div class="table-wrap">
           <table>
             <caption class="visually-hidden">Results per category</caption>
-            <thead><tr><th scope="col">Category</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th></tr></thead>
+            <thead><tr><th scope="col">Category</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th><th scope="col">Success rate</th></tr></thead>
             <tbody id="stats-categories"></tbody>
           </table>
         </div>
+      </details>
+      <details>
+        <summary>Last 50 challenges</summary>
+        <ol id="history" class="history"></ol>
       </details>
       <button type="button" id="reset-stats" class="btn btn-small btn-ghost">Reset stats</button>
     </section>

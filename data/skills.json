@@ -1,5 +1,5 @@
 {
-  "_note": "Hand-curated. perHour = rough units per hour for a near-maxed player using a normal (non tick-perfect) method, rounded down. In task strings {n} is the count and {s} a plural 's'. consumes = tradeable item used up once per unit (used for the gp-at-stake line).",
+  "_note": "Hand-curated. perHour = rough units per hour for a near-maxed player using a normal (non tick-perfect) method, rounded down. In task strings {n} is the count and {s} a plural 's'. fixed = one-off tasks with a time estimate instead of a rate (Farming, where growth timers rule out bulk counts). consumes = tradeable item used up once per unit (used for the gp-at-stake line).",
   "skills": [
     {"skill": "Mining", "activities": [
       {"task": "Mine {n} amethyst", "perHour": 85},
@@ -112,7 +112,18 @@
     ]},
     {"skill": "Sailing", "activities": [
       {"task": "Complete {n} run{s} of the Tempor Tantrum Barracuda Trial", "perHour": 12},
-      {"task": "Complete {n} port task{s}", "perHour": 8}
+      {"task": "Complete {n} run{s} of the Jubbly Jive Barracuda Trial", "perHour": 10},
+      {"task": "Complete {n} run{s} of the Gwenith Glide Barracuda Trial", "perHour": 9},
+      {"task": "Complete {n} courier port task{s}", "perHour": 8},
+      {"task": "Complete {n} bounty port task{s}", "perHour": 6}
+    ]},
+    {"skill": "Farming", "fixed": [
+      {"title": "herb run", "task": "Do a full herb run: visit every herb patch you have unlocked, harvest what is ready and replant", "minutes": 10},
+      {"title": "tree run", "task": "Do a full tree run: visit every regular tree patch, check health, clear and replant", "minutes": 12},
+      {"title": "fruit tree run", "task": "Do a full fruit tree run: visit every fruit tree patch, check health, clear and replant", "minutes": 12},
+      {"title": "birdhouse and seaweed run", "task": "Empty and rebuild all four Fossil Island birdhouses, then harvest and replant both giant seaweed patches", "minutes": 10},
+      {"title": "herbs, trees and fruit trees", "task": "Do a herb run, a tree run and a fruit tree run back to back", "minutes": 35},
+      {"title": "the full farm tour", "task": "Visit every farming patch in the game that you have unlocked (herbs, allotments, flowers, bushes, hops, trees, fruit trees, hardwoods, cacti, and every special patch), harvesting and replanting as you go", "minutes": 75}
     ]}
   ]
 }

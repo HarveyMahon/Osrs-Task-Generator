@@ -33,29 +33,39 @@ To host it, enable GitHub Pages for the repository (deploy from the default bran
 | `scripts/fixtures/` | Small recorded API responses for testing the refresh script without the network. |
 | `scripts/check_generator.js` | Sanity checks for the generator (Node, no dependencies). |
 | `.github/workflows/update-data.yml` | Weekly run of the refresh script. |
+| `.github/workflows/check.yml` | Runs the generator checks and an offline test of the refresh script on every push and pull request. |
+| `notes/ideas.md` | Ideas that were considered and parked. Not part of the site. |
 
 ## How challenges are generated
 
 `app.js` builds the full pool once, when the page loads, by filling templates with the data files:
 
-- **Combat**: "N kills" of a boss, raid or slayer monster, with a tier-dependent rule set (trip limits, no deaths, no special attacks, gear value caps, Wilderness risk), and "N slayer tasks from a master".
-- **Skilling** and **Minigames**: "do N of something", from a relaxed version at Casual to a hard time limit at Hardcore and Extreme. Some minigames add a twist (win every game, no food, and so on).
+- **Combat**: "N kills" of a boss, raid or slayer monster, with a tier-dependent rule set (trip limits, no deaths, no special attacks, gear value caps, Wilderness risk, or a single attack style where the boss supports more than one), hand-written multi-boss "boss tours", and "N slayer tasks from a master".
+- **Skilling** and **Minigames**: "do N of something" (Farming uses fixed patch runs instead, since growth timers rule out bulk counts), from a relaxed version at Casual to a hard time limit at Hardcore and Extreme. Some minigames add a twist (win every game, no food, and so on).
 - **Pets and rare drops**: "get drop X within N attempts". N is what fits in the tier's time, and a drop is only offered in a tier if the chance of success lands in that tier's band (Casual 25% or better, Standard 15 to 55%, Hardcore 5 to 20%, Extreme 0.8 to 7%).
 - **Quests and diaries**: trophy times on Quest Speedrunning worlds, Nightmare Zone quest boss rematches, and "victory laps" of achievement diary task lists. Ordinary quests are not used, because a quest can only be replayed on a speedrunning world.
 
 Counts are always rounded down to a friendly number and the time target is derived from the count, so a challenge can never exceed its tier's window or three hours. Tier windows are 15 to 45 minutes, 45 to 90 minutes, 1.5 to 2.25 hours and 2.25 to 3 hours.
 
+Beyond tier and category, the player can:
+
+- **Leave things out**: Wilderness, content that needs other players, Slayer-task-only monsters, raids, wave challenges (Inferno, Colosseum, Fight Cave) and speedrunning worlds.
+- **Set a time limit** with a slider; only challenges whose target fits are offered.
+- **Lock and reroll**: keep the target and change the rules, or keep the rules and change the target.
+- **Roll the daily challenge**: one per tier per UTC day, the same for everyone. It is picked with a random number generator seeded from the date and tier, from a pool that excludes anything needing a Slayer task. It ignores the player's category and opt-out settings so that everyone gets the same one. Because the pick depends on the pool, changing the data files changes that day's daily.
+- **Copy the challenge as text** for pasting into chat.
+
 Rolling picks a category first, then a "kind" inside it (for example one boss), then a challenge, so large groups do not drown small ones. The last 12 challenges shown are avoided, and the same challenge is never shown twice in a row.
 
-The pool currently holds about 3,200 distinct challenges. Run the checks with:
+The pool currently holds about 3,600 distinct challenges. Run the checks with:
 
 ```bash
 node scripts/check_generator.js
 ```
 
-It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, and it rolls 48,000 challenges the way the UI does.
+It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, and it rolls 48,000 challenges the way the UI does.
 
-Stats (completed, failed and skipped, per tier and per category) and your settings are kept in `localStorage`. Every read and write is wrapped in `try/catch`; if storage is blocked the site still works and simply tells you the stats will not persist.
+Stats (completed, failed and skipped, with a success rate, per tier and per category), the current and best completion streak, the last 50 results, today's daily results and your settings are kept in `localStorage`. Every read and write is wrapped in `try/catch`; if storage is blocked the site still works and simply tells you the stats will not persist.
 
 ## Refreshing the data
 
@@ -115,10 +125,12 @@ All gameplay numbers were written from memory for a near-maxed account and are d
 - **Kills per hour, skilling rates and minigame lengths** are rough estimates.
 - **Drop rates** are the commonly quoted ones. Lower-confidence entries: Dragon warhammer (1/3,000), Glacial temotli (1/100), the Wilderness boss uniques after the 2023 rework, Araxxor uniques (1/600 each), Tormented Demon drops (1/500), and the "any piece" Barrows figure (about 1/15 per chest with all brothers killed).
 - **Tradeability**: an item is marked `tradeable: false` when the price feed had no entry for it on 2026-11-09. That is right for pets and for parts such as Noxious halberd pieces, but an item that is tradeable and simply missing from the feed would be mislabelled (Ancient icon is the one to check).
-- **Sailing** has only two activities, with guessed rates.
+- **Sailing** has five activities, with guessed rates.
+- **Newer bosses** (Royal Titans, Yama, Doom of Mokhaiotl, the Hueycoatl, Moons of Peril) have guessed kill speeds.
+- **Attack-style challenges** rely on a hand-written list of which styles work at each boss (`styles` in `data/monsters.json`); the first style listed is the usual one and only the others are offered.
 - **Quest speedruns** use the 15 quests and the trophy times listed on the wiki's [Quest Speedrunning](https://oldschool.runescape.wiki/w/Quest_Speedrunning) page as read on 2026-11-09 (one extra page request, made by hand). They are not refreshed by the script, so they will go stale if Jagex changes the times or adds quests. The attempt caps assume about 2 minutes of setup per run.
 - **Nightmare Zone boss rushes** assume a customisable hard rumble can be limited to the listed bosses.
 - **Diary laps** use one flat time per difficulty for every area.
 - **Slayer-only bosses** (Cerberus, Kraken, Hydra and so on) appear only in Casual and Standard and are tagged "Needs a Slayer task", since the generator cannot know your current task.
-- There are no Farming challenges (growth timers do not fit a single session) and no Grand Exchange or trading challenges.
+- Farming is limited to patch runs (herb, tree, fruit tree and so on), where a patch that is still growing counts once visited. There are no Grand Exchange or trading challenges.
 - "No death risk" at Casual means: no Wilderness content, and dying never fails the challenge.

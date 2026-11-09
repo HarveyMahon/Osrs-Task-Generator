@@ -18,6 +18,18 @@
     { id: 'luck', label: 'Pets & rare drops', hint: 'luck hunts with an attempt cap' },
     { id: 'quests', label: 'Quests & diaries', hint: 'quest speedruns, boss rematches, diary laps' }
   ];
+  // Opt-outs: things a player may simply not want (or be able) to do.
+  var EXCLUDES = [
+    { id: 'wilderness', label: 'Wilderness' },
+    { id: 'team', label: 'Needs other players' },
+    { id: 'task', label: 'Slayer-task-only monsters' },
+    { id: 'raid', label: 'Raids' },
+    { id: 'waves', label: 'Inferno, Colosseum, Fight Cave' },
+    { id: 'speedrun', label: 'Speedrunning worlds' }
+  ];
+  // Display tag -> opt-out flag.
+  var TAG_FLAGS = { 'Wilderness': 'wilderness', 'Team content': 'team', 'Needs other players': 'team', 'Needs a Slayer task': 'task', 'Raid': 'raid', 'Wave challenge': 'waves', 'Speedrunning world': 'speedrun' };
+  var FLAG_TAGS = { wilderness: 'Wilderness', team: 'Team content', raid: 'Raid', waves: 'Wave challenge' };
   var MAX_MINUTES = 180;
   var TIER_ORDER = { casual: 0, standard: 1, hardcore: 2, extreme: 3 };
 
@@ -113,6 +125,18 @@
     return mods;
   }
 
+  function styleMods(mon, tier) {
+    if (tier.id === 'casual' || mon.type === 'raid' || !mon.styles || mon.styles.length < 2) return [];
+    var pk = mon.wilderness ? ' PKers count.' : '';
+    return mon.styles.slice(1).map(function (style) {
+      var name = style.charAt(0).toUpperCase() + style.slice(1);
+      var rules = [name + ' attacks only: every hit on the target must be ' + style + '. (The usual approach here is ' + mon.styles[0] + '.)', 'No deaths.' + pk];
+      var fail = 'You die, or you damage the target with anything other than ' + style + '.';
+      if (tier.id === 'extreme') { rules.splice(1, 0, 'No special attacks.'); fail = 'You die, use a special attack, or damage the target with anything other than ' + style + '.'; }
+      return { key: 'style-' + style, name: name + ' only', eff: 0.7, rules: rules, fail: fail };
+    });
+  }
+
   function buildCombat(data, gp, out) {
     var seen = {};
     data.monsters.monsters.forEach(function (mon) {
@@ -122,7 +146,7 @@
         if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
         // Mods are chosen from the slot length, then the count is scaled by the mod's efficiency.
         tier.durations.forEach(function (d) {
-          combatMods(mon, tier, d, gp).forEach(function (mod) {
+          combatMods(mon, tier, d, gp).concat(styleMods(mon, tier)).forEach(function (mod) {
             var c = makeCount(mon.perHour * mod.eff, d, tier);
             if (!c) return;
             var id = ['combat', 'count', mon.name, tier.id, mod.key, c.n].join('|');
@@ -133,6 +157,7 @@
             if (mon.wilderness) tags.push('Wilderness');
             if (mon.team) tags.push('Team content');
             if (mon.taskOnly) tags.push('Needs a Slayer task');
+            if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
             out.push({
               id: id,
               category: 'combat', kind: 'count:' + mon.type, tier: tier.id,
@@ -144,6 +169,24 @@
             });
           });
         });
+      });
+    });
+
+    (data.monsters.feats || []).forEach(function (feat) {
+      var tier = tierForMinutes(feat.minutes);
+      if (!tier) return;
+      var safe = tier.id === 'casual';
+      var tags = (feat.flags || []).map(function (f) { return FLAG_TAGS[f]; });
+      var wild = tags.indexOf('Wilderness') !== -1;
+      out.push({
+        id: ['combat', 'feat', feat.title].join('|'),
+        category: 'combat', kind: 'feat', tier: tier.id,
+        title: 'Boss tour: ' + feat.title,
+        description: feat.task + '.',
+        rules: safe ? ['Any gear, any method. Deaths only cost you time.'] : ['Banking between bosses is fine unless the task says otherwise.', 'No deaths.' + (wild ? ' PKers count.' : '')],
+        targetMinutes: feat.minutes, tags: tags, stake: wild ? 'Whatever you carry is at risk in the Wilderness.' : null,
+        success: 'Every kill on the list has been made since you started, with every rule kept.',
+        failure: safe ? 'You call it a day before every kill on the list is made.' : 'You die, break a condition in the task, or stop before every kill on the list is made.'
       });
     });
 
@@ -188,6 +231,7 @@
           var tags = ['About ' + pct + '% chance'];
           if (mon.wilderness) tags.push('Wilderness');
           if (mon.taskOnly) tags.push('Needs a Slayer task');
+          if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
           out.push({
             id: ['luck', mon.name, drop.item, tier.id].join('|'),
             category: 'luck', kind: 'hunt:' + mon.type, tier: tier.id,
@@ -220,7 +264,21 @@
 
   function buildSkilling(data, gp, valueOf, out) {
     data.skills.skills.forEach(function (sk) {
-      sk.activities.forEach(function (act) {
+      (sk.fixed || []).forEach(function (fx) {
+        var tier = tierForMinutes(fx.minutes);
+        if (!tier) return;
+        out.push({
+          id: ['skilling', sk.skill, 'fixed', fx.title].join('|'),
+          category: 'skilling', kind: 'skill:' + sk.skill, tier: tier.id,
+          title: sk.skill + ': ' + fx.title,
+          description: fx.task + '.',
+          rules: ['A patch that is still growing counts once you have visited it.'].concat(tier.id === 'casual' ? [] : ['One sitting, no unrelated activities.']),
+          targetMinutes: fx.minutes, tags: [], stake: null,
+          success: 'Every patch on the route has been visited, with anything ready harvested and replanted.',
+          failure: tier.id === 'casual' ? 'You call it a day before the last patch on the route.' : 'You wander off to do something else, or stop before the last patch on the route.'
+        });
+      });
+      (sk.activities || []).forEach(function (act) {
         TIERS.forEach(function (tier) {
           if (act.wilderness && tier.id === 'casual') return;
           eachCount(act.perHour, tier, function (c) {
@@ -373,17 +431,42 @@
     buildMinigames(data, out);
     buildLuck(data, gp, function (n) { return !!pets[n]; }, out);
     buildQuests(data, out);
-    return out;
+    return out.map(annotate);
+  }
+
+  /* Opt-out flags come from the display tags; "subject" (what you do it to)
+   * and "variant" (the rule set) come from the id, and drive lock-and-reroll. */
+  function annotate(c) {
+    var p = c.id.split('|');
+    c.flags = c.tags.map(function (t) { return TAG_FLAGS[t]; }).filter(Boolean);
+    if (p[0] === 'combat' && p[1] === 'count') { c.subject = p[2]; c.variant = p[4]; }
+    else if (p[0] === 'combat') { c.subject = p[2]; c.variant = p[1]; }
+    else if (p[0] === 'luck') { c.subject = p[1]; c.variant = 'hunt'; }
+    else if (p[0] === 'skilling') { c.subject = p[2] === 'fixed' ? p[3] : p[2]; c.variant = p[2] === 'fixed' ? 'fixed' : p[4]; }
+    else if (p[0] === 'minigames') { c.subject = p[1]; c.variant = p[3]; }
+    else if (p[1] === 'speedrun') { c.subject = p[2]; c.variant = p[4]; }
+    else if (p[1] === 'diary') { c.subject = p[2]; c.variant = p[3]; }
+    else { c.subject = p[1] === 'rush' ? p[3] : p[2]; c.variant = p[1]; }
+    return c;
+  }
+
+  /* settings: { tier, categories[], exclude[], maxMinutes } */
+  function filterPool(pool, settings) {
+    var exclude = settings.exclude || [];
+    var max = settings.maxMinutes || MAX_MINUTES;
+    return pool.filter(function (c) {
+      return c.tier === settings.tier && settings.categories.indexOf(c.category) !== -1 && c.targetMinutes <= max &&
+        !c.flags.some(function (f) { return exclude.indexOf(f) !== -1; });
+    });
   }
 
   /* Pick: category first (so big categories do not drown small ones), then a
    * "kind" within it (so one boss with many variants does not dominate), then
    * a challenge, avoiding anything in `recent` where an alternative exists. */
-  function pickChallenge(pool, tierId, categoryIds, recent, rng) {
+  function pickFrom(eligible, recent, rng) {
     rng = rng || Math.random;
     recent = recent || [];
     var pick = function (arr) { return arr[Math.floor(rng() * arr.length)]; };
-    var eligible = pool.filter(function (c) { return c.tier === tierId && categoryIds.indexOf(c.category) !== -1; });
     if (!eligible.length) return null;
     var fresh = eligible.filter(function (c) { return recent.indexOf(c.id) === -1; });
     if (fresh.length) eligible = fresh;
@@ -393,13 +476,48 @@
     }
     var byCat = {};
     eligible.forEach(function (c) { (byCat[c.category] = byCat[c.category] || []).push(c); });
-    var inCat = byCat[pick(Object.keys(byCat))];
+    var inCat = byCat[pick(Object.keys(byCat).sort())];
     var byKind = {};
     inCat.forEach(function (c) { (byKind[c.kind] = byKind[c.kind] || []).push(c); });
-    return pick(byKind[pick(Object.keys(byKind))]);
+    return pick(byKind[pick(Object.keys(byKind).sort())]);
+  }
+  function pickChallenge(pool, settings, recent, rng) {
+    return pickFrom(filterPool(pool, settings), recent, rng);
   }
 
-  var api = { TIERS: TIERS, CATEGORIES: CATEGORIES, MAX_MINUTES: MAX_MINUTES, buildPool: buildPool, pickChallenge: pickChallenge, fmtMinutes: fmtMinutes, fmtGp: fmtGp };
+  /* Lock and reroll. keep = 'subject': same target, different rules or count.
+   * keep = 'variant': same rule set, different target. Null if nothing fits. */
+  function rerollKeeping(pool, settings, current, keep, rng) {
+    rng = rng || Math.random;
+    var options = filterPool(pool, settings).filter(function (c) {
+      if (c.id === current.id || c.category !== current.category) return false;
+      return keep === 'subject' ? c.subject === current.subject : (c.variant === current.variant && c.subject !== current.subject);
+    });
+    if (keep === 'subject') {
+      var changed = options.filter(function (c) { return c.variant !== current.variant; });
+      if (changed.length) options = changed;
+    }
+    return options.length ? options[Math.floor(rng() * options.length)] : null;
+  }
+
+  /* Daily challenge: the same for everyone on a given UTC date and tier.
+   * Limited to things an account with everything unlocked can always do:
+   * nothing that needs a Slayer task (quests are speedrun-world only anyway). */
+  function seededRng(text) {
+    var h = 1779033703 ^ text.length;
+    for (var i = 0; i < text.length; i++) { h = Math.imul(h ^ text.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+  }
+  function dailyChallenge(pool, tierId, dateText) {
+    var eligible = filterPool(pool, { tier: tierId, categories: CATEGORIES.map(function (c) { return c.id; }), exclude: ['task'] });
+    eligible.sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+    return pickFrom(eligible, [], seededRng('daily|' + dateText + '|' + tierId));
+  }
+
+  var api = { TIERS: TIERS, CATEGORIES: CATEGORIES, EXCLUDES: EXCLUDES, MAX_MINUTES: MAX_MINUTES, buildPool: buildPool, filterPool: filterPool, pickChallenge: pickChallenge, rerollKeeping: rerollKeeping, dailyChallenge: dailyChallenge, fmtMinutes: fmtMinutes, fmtGp: fmtGp };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.OsrsTasks = api;
   if (typeof document === 'undefined') return;
@@ -407,6 +525,8 @@
   // ==================================================================== UI
   var STORE_KEY = 'osrs-task-generator:v1';
   var DATA_FILES = ['items', 'monsters', 'skills', 'minigames', 'quests', 'meta'];
+  var HISTORY_LIMIT = 50;
+  var RESULT_LABEL = { completed: 'Completed', failed: 'Failed', skipped: 'Skipped' };
   var QUIPS = {
     combat: ['Sit, rat.', 'Bank your loot. Or do not. We are not your mum.', 'Remember: the boss has no idea you are on a challenge.', 'Protect from Missiles, pray for luck.'],
     skilling: ['Number go up.', 'Podcast recommended.', '92 is half of 99, and this is a fraction of that.', 'Your wrists called. They said "stretch".'],
@@ -428,6 +548,8 @@
     return e;
   }
   function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
+  function todayUtc() { return new Date().toISOString().slice(0, 10); }
 
   // localStorage may be missing, full, or blocked: every access is guarded.
   function loadStore() {
@@ -441,90 +563,131 @@
     try { root.localStorage.setItem(STORE_KEY, JSON.stringify(store)); return true; } catch (e) { return false; }
   }
   function blankCounts() { return { completed: 0, failed: 0, skipped: 0 }; }
+  function wholeNumber(v) { v = Number(v); return isFinite(v) && v > 0 ? Math.floor(v) : 0; }
   function normaliseStore(s) {
     var stats = s.stats && typeof s.stats === 'object' ? s.stats : {};
     var clean = { tiers: {}, categories: {} };
     var fix = function (src, ids, dest) {
       ids.forEach(function (id) {
         var c = blankCounts(), from = src && src[id] ? src[id] : {};
-        Object.keys(c).forEach(function (k) { var v = Number(from[k]); c[k] = isFinite(v) && v > 0 ? Math.floor(v) : 0; });
+        Object.keys(c).forEach(function (k) { c[k] = wholeNumber(from[k]); });
         dest[id] = c;
       });
     };
-    fix(stats.tiers, TIERS.map(function (t) { return t.id; }), clean.tiers);
-    fix(stats.categories, CATEGORIES.map(function (c) { return c.id; }), clean.categories);
+    var ids = function (list) { return list.map(function (x) { return x.id; }); };
+    fix(stats.tiers, ids(TIERS), clean.tiers);
+    fix(stats.categories, ids(CATEGORIES), clean.categories);
     var settings = s.settings && typeof s.settings === 'object' ? s.settings : {};
+    var keep = function (value, list, fallback) {
+      return Array.isArray(value) ? value.filter(function (v) { return !!byId(list, v); }) : fallback;
+    };
+    var max = wholeNumber(settings.maxMinutes);
+    var streak = s.streak && typeof s.streak === 'object' ? s.streak : {};
+    var daily = s.daily && typeof s.daily === 'object' && s.daily.date === todayUtc() && s.daily.results && typeof s.daily.results === 'object' ? s.daily : { date: todayUtc(), results: {} };
     return {
       stats: clean,
       settings: {
         tier: TIER_ORDER.hasOwnProperty(settings.tier) ? settings.tier : 'standard',
-        categories: Array.isArray(settings.categories) ? settings.categories.filter(function (c) { return CATEGORIES.some(function (x) { return x.id === c; }); }) : CATEGORIES.map(function (c) { return c.id; })
+        categories: keep(settings.categories, CATEGORIES, ids(CATEGORIES)),
+        exclude: keep(settings.exclude, EXCLUDES, []),
+        maxMinutes: max >= 15 && max <= MAX_MINUTES ? max : MAX_MINUTES
       },
-      current: typeof s.current === 'string' ? s.current : null
+      history: (Array.isArray(s.history) ? s.history : []).filter(function (h) {
+        return h && typeof h.title === 'string' && RESULT_LABEL[h.result] && TIER_ORDER.hasOwnProperty(h.tier);
+      }).slice(0, HISTORY_LIMIT),
+      streak: { current: wholeNumber(streak.current), best: wholeNumber(streak.best) },
+      daily: daily,
+      current: typeof s.current === 'string' ? s.current : null,
+      currentDaily: s.currentDaily === todayUtc() ? s.currentDaily : null
     };
   }
 
   var store = normaliseStore(loadStore());
   var pool = [];
   var current = null;      // challenge on screen
+  var currentDaily = null; // UTC date if the challenge on screen is a daily
   var resolved = false;    // has it been marked completed/failed?
   var recent = [];         // ids shown recently, newest last
   var timer = { running: false, startedAt: 0, elapsed: 0, handle: null };
 
-  function selectedTier() {
-    var r = document.querySelector('input[name="tier"]:checked');
-    return r ? r.value : 'standard';
+  function checkedValues(name) {
+    return Array.prototype.map.call(document.querySelectorAll('input[name="' + name + '"]:checked'), function (c) { return c.value; });
   }
-  function selectedCategories() {
-    return Array.prototype.map.call(document.querySelectorAll('input[name="category"]:checked'), function (c) { return c.value; });
+  function readSettings() {
+    return {
+      tier: checkedValues('tier')[0] || 'standard',
+      categories: checkedValues('category'),
+      exclude: checkedValues('exclude'),
+      maxMinutes: Number($('max-minutes').value) || MAX_MINUTES
+    };
+  }
+
+  function addChoice(box, type, name, value, checked, title, hint, cls) {
+    var label = el('label', 'choice' + (cls ? ' ' + cls : ''));
+    var input = el('input');
+    input.type = type; input.name = name; input.value = value; input.checked = checked;
+    label.appendChild(input);
+    var span = el('span', 'choice-body');
+    span.appendChild(el('span', 'choice-title', title));
+    if (hint) span.appendChild(el('span', 'choice-hint', hint));
+    label.appendChild(span);
+    box.appendChild(label);
   }
 
   function renderControls() {
-    var tierBox = $('tier-options');
     TIERS.forEach(function (t) {
-      var label = el('label', 'choice tier-' + t.id);
-      var input = el('input');
-      input.type = 'radio'; input.name = 'tier'; input.value = t.id;
-      input.checked = store.settings.tier === t.id;
-      label.appendChild(input);
-      var span = el('span', 'choice-body');
-      span.appendChild(el('span', 'choice-title', t.label));
-      span.appendChild(el('span', 'choice-hint', t.blurb + ' About ' + t.range + '.'));
-      label.appendChild(span);
-      tierBox.appendChild(label);
+      addChoice($('tier-options'), 'radio', 'tier', t.id, store.settings.tier === t.id, t.label, t.blurb + ' About ' + t.range + '.', 'tier-' + t.id);
     });
-    var catBox = $('category-options');
     CATEGORIES.forEach(function (c) {
-      var label = el('label', 'choice');
-      var input = el('input');
-      input.type = 'checkbox'; input.name = 'category'; input.value = c.id;
-      input.checked = store.settings.categories.indexOf(c.id) !== -1;
-      label.appendChild(input);
-      var span = el('span', 'choice-body');
-      span.appendChild(el('span', 'choice-title', c.label));
-      span.appendChild(el('span', 'choice-hint', c.hint));
-      label.appendChild(span);
-      catBox.appendChild(label);
+      addChoice($('category-options'), 'checkbox', 'category', c.id, store.settings.categories.indexOf(c.id) !== -1, c.label, c.hint);
     });
+    EXCLUDES.forEach(function (x) {
+      addChoice($('exclude-options'), 'checkbox', 'exclude', x.id, store.settings.exclude.indexOf(x.id) !== -1, x.label, null, 'choice-compact');
+    });
+    $('max-minutes').value = store.settings.maxMinutes;
     $('controls').addEventListener('change', onSettingsChange);
+    $('max-minutes').addEventListener('input', renderTimeLimit);
+    renderTimeLimit();
+  }
+
+  function renderTimeLimit() {
+    var v = Number($('max-minutes').value);
+    var text = v >= MAX_MINUTES ? '3 h (no limit)' : fmtMinutes(v);
+    $('max-minutes-readout').textContent = text;
+    $('max-minutes').setAttribute('aria-valuetext', text);
   }
 
   function onSettingsChange() {
-    store.settings.tier = selectedTier();
-    store.settings.categories = selectedCategories();
+    store.settings = readSettings();
     saveStore();
     updateGenerateState();
   }
 
   function updateGenerateState() {
-    var cats = selectedCategories(), tier = selectedTier();
-    var count = pool.filter(function (c) { return c.tier === tier && cats.indexOf(c.category) !== -1; }).length;
-    var btn = $('generate');
-    btn.disabled = !pool.length || count === 0;
+    var settings = readSettings();
+    var count = pool.length ? filterPool(pool, settings).length : 0;
+    $('generate').disabled = count === 0;
     var note = $('pool-note');
     if (!pool.length) note.textContent = '';
-    else if (!cats.length) note.textContent = 'Tick at least one category to roll a challenge.';
+    else if (!settings.categories.length) note.textContent = 'Tick at least one category to roll a challenge.';
+    else if (!count) note.textContent = 'Nothing fits those settings. Try more time, fewer opt-outs, or a lower tier.';
     else note.textContent = fmtNum(count) + ' possible challenges with these settings.';
+    var tier = byId(TIERS, settings.tier);
+    var done = store.daily.results[settings.tier];
+    $('daily').disabled = !pool.length;
+    $('daily').textContent = 'Daily ' + tier.label + ' challenge' + (done ? ' (' + RESULT_LABEL[done].toLowerCase() + ')' : '');
+    updateRerollState();
+  }
+
+  function updateRerollState() {
+    var usable = !!current && !resolved && !currentDaily;
+    var settings = readSettings();
+    if (current) settings.tier = current.tier;
+    ['subject', 'variant'].forEach(function (keep) {
+      var btn = $('reroll-' + keep);
+      btn.disabled = !usable || !rerollKeeping(pool, settings, current, keep);
+    });
+    $('reroll-row').hidden = !current || !!currentDaily;
   }
 
   function setTimerRunning(run) {
@@ -555,14 +718,15 @@
     $('timer-note').textContent = over ? 'Past the target. That is fine: it is a target, not a rule.' : 'Optional. It never ends the challenge for you.';
   }
 
-  function renderChallenge(c, announce) {
-    current = c; resolved = false;
+  function renderChallenge(c, opts) {
+    opts = opts || {};
+    current = c; currentDaily = opts.daily || null; resolved = false;
     $('empty-state').hidden = true;
     $('challenge').hidden = false;
-    var tier = TIERS[TIER_ORDER[c.tier]];
-    var cat = CATEGORIES.filter(function (x) { return x.id === c.category; })[0];
+    var tier = byId(TIERS, c.tier), cat = byId(CATEGORIES, c.category);
     var badges = $('challenge-badges');
     badges.textContent = '';
+    if (currentDaily) badges.appendChild(el('li', 'badge badge-daily', 'Daily · ' + currentDaily));
     badges.appendChild(el('li', 'badge badge-tier tier-' + tier.id, tier.label));
     badges.appendChild(el('li', 'badge', cat.label));
     c.tags.forEach(function (t) { badges.appendChild(el('li', 'badge badge-soft', t)); });
@@ -582,36 +746,60 @@
     $('generate').textContent = 'Roll a different one';
     resetTimer();
     store.current = c.id;
+    store.currentDaily = currentDaily;
     saveStore();
-    if (announce) {
-      var title = $('challenge-title');
-      title.focus();
+    var doneToday = currentDaily ? store.daily.results[c.tier] : null;
+    if (doneToday && doneToday !== 'skipped') {
+      resolved = true;
+      setActionsEnabled(false);
+      $('outcome').textContent = 'You already logged today’s ' + tier.label + ' daily as ' + doneToday + '. A new one arrives at midnight UTC.';
     }
+    updateRerollState();
+    if (opts.focus) $('challenge-title').focus();
   }
 
   function setActionsEnabled(on) {
     ['mark-completed', 'mark-failed', 'mark-skipped'].forEach(function (id) { $(id).disabled = !on; });
   }
 
-  function roll() {
-    var c = pickChallenge(pool, selectedTier(), selectedCategories(), recent);
+  function show(c, opts) {
     if (!c) return;
     recent.push(c.id);
     if (recent.length > 12) recent.shift();
-    renderChallenge(c, true);
+    renderChallenge(c, opts || { focus: true });
+  }
+  function roll() { show(pickChallenge(pool, readSettings(), recent)); }
+  function rollDaily() {
+    if (store.daily.date !== todayUtc()) store.daily = { date: todayUtc(), results: {} };
+    show(dailyChallenge(pool, readSettings().tier, todayUtc()), { focus: true, daily: todayUtc() });
+  }
+  function reroll(keep) {
+    if (!current || resolved || currentDaily) return;
+    var settings = readSettings();
+    settings.tier = current.tier;
+    show(rerollKeeping(pool, settings, current, keep));
   }
 
   function record(result) {
     if (!current || resolved) return;
     store.stats.tiers[current.tier][result]++;
     store.stats.categories[current.category][result]++;
-    store.current = null;
+    store.history.unshift({ title: current.title, tier: current.tier, category: current.category, result: result, at: new Date().toISOString(), daily: !!currentDaily });
+    store.history = store.history.slice(0, HISTORY_LIMIT);
+    if (result === 'completed') { store.streak.current++; store.streak.best = Math.max(store.streak.best, store.streak.current); }
+    if (result === 'failed') store.streak.current = 0;
+    if (currentDaily) {
+      if (store.daily.date !== currentDaily) store.daily = { date: currentDaily, results: {} };
+      store.daily.results[current.tier] = result;
+    }
+    store.current = null; store.currentDaily = null;
     var saved = saveStore();
     renderStats();
     var message = sample(OUTCOMES[result]) + (saved ? '' : ' (Your browser is not letting us save stats, so this only lasts until you close the tab.)');
     if (result === 'skipped') {
       roll();
-      $('outcome').textContent = message + ' Here is a fresh one.';
+      updateGenerateState();
+      $('outcome').textContent = message + (current ? ' Here is a fresh one.' : '');
       return;
     }
     resolved = true;
@@ -619,7 +807,39 @@
     setActionsEnabled(false);
     $('outcome').textContent = message;
     $('generate').textContent = 'Roll again';
+    updateGenerateState();
     $('generate').focus();
+  }
+
+  function challengeText(c) {
+    var tier = byId(TIERS, c.tier), cat = byId(CATEGORIES, c.category);
+    var lines = ['**OSRS challenge: ' + c.title + '** (' + tier.label + ' · ' + cat.label + (currentDaily ? ' · Daily ' + currentDaily : '') + ')', c.description];
+    c.rules.forEach(function (r) { lines.push('• ' + r); });
+    lines.push('Target time: about ' + fmtMinutes(c.targetMinutes) + ' (soft target)');
+    lines.push('Success: ' + c.success);
+    lines.push('Fail: ' + c.failure);
+    if (c.stake) lines.push('Gp at stake: ' + c.stake);
+    return lines.join('\n');
+  }
+  function copyChallenge() {
+    if (!current) return;
+    var text = challengeText(current);
+    var done = function (ok) { $('copy-note').textContent = ok ? 'Copied. Paste it wherever your friends can judge you.' : 'Could not copy automatically. Select the text on the card instead.'; };
+    var fallback = function () {
+      try {
+        var area = el('textarea');
+        area.value = text; area.setAttribute('readonly', ''); area.style.position = 'fixed'; area.style.opacity = '0';
+        document.body.appendChild(area); area.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        done(ok);
+      } catch (e) { done(false); }
+    };
+    try {
+      if (root.navigator && root.navigator.clipboard && root.navigator.clipboard.writeText) {
+        root.navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+      } else fallback();
+    } catch (e) { fallback(); }
   }
 
   function renderStats() {
@@ -630,7 +850,9 @@
         var tr = el('tr');
         var th = el('th', null, d.label); th.scope = 'row';
         tr.appendChild(th);
-        ['completed', 'failed', 'skipped'].forEach(function (k) { tr.appendChild(el('td', null, fmtNum(src[d.id][k]))); });
+        var c = src[d.id], judged = c.completed + c.failed;
+        ['completed', 'failed', 'skipped'].forEach(function (k) { tr.appendChild(el('td', null, fmtNum(c[k]))); });
+        tr.appendChild(el('td', null, judged ? Math.round(100 * c.completed / judged) + '%' : '–'));
         body.appendChild(tr);
       });
     };
@@ -639,13 +861,27 @@
     var total = blankCounts();
     TIERS.forEach(function (t) { Object.keys(total).forEach(function (k) { total[k] += store.stats.tiers[t.id][k]; }); });
     $('stats-summary').textContent = total.completed + ' completed, ' + total.failed + ' failed, ' + total.skipped + ' skipped';
+    $('streak').textContent = 'Current streak: ' + store.streak.current + ' completed in a row (best: ' + store.streak.best + '). Skips do not break a streak.';
+    var list = $('history');
+    list.textContent = '';
+    if (!store.history.length) list.appendChild(el('li', 'muted', 'Nothing yet. Go on, roll one.'));
+    store.history.forEach(function (h) {
+      var li = el('li', 'history-' + h.result);
+      li.appendChild(el('span', 'history-result', RESULT_LABEL[h.result]));
+      li.appendChild(el('span', 'history-title', h.title));
+      var when = typeof h.at === 'string' ? h.at.slice(0, 10) : '';
+      li.appendChild(el('span', 'history-meta muted', byId(TIERS, h.tier).label + (h.daily ? ' · daily' : '') + (when ? ' · ' + when : '')));
+      list.appendChild(li);
+    });
   }
 
   function resetStats() {
-    if (!root.confirm('Reset all completion stats? This cannot be undone.')) return;
-    store.stats = normaliseStore({}).stats;
+    if (!root.confirm('Reset all stats, streaks and history? This cannot be undone.')) return;
+    var blank = normaliseStore({});
+    store.stats = blank.stats; store.history = []; store.streak = blank.streak; store.daily = blank.daily;
     saveStore();
     renderStats();
+    updateGenerateState();
   }
 
   function loadData() {
@@ -666,6 +902,10 @@
     renderStats();
     renderTimer();
     $('generate').addEventListener('click', roll);
+    $('daily').addEventListener('click', rollDaily);
+    $('reroll-subject').addEventListener('click', function () { reroll('subject'); });
+    $('reroll-variant').addEventListener('click', function () { reroll('variant'); });
+    $('copy').addEventListener('click', copyChallenge);
     $('mark-completed').addEventListener('click', function () { record('completed'); });
     $('mark-failed').addEventListener('click', function () { record('failed'); });
     $('mark-skipped').addEventListener('click', function () { record('skipped'); });
@@ -678,11 +918,11 @@
       $('data-date').textContent = data.meta && data.meta.fetched_date ? data.meta.fetched_date : 'unknown date';
       $('pool-size').textContent = fmtNum(pool.length);
       $('load-status').hidden = true;
-      updateGenerateState();
       if (store.current) {
-        var saved = pool.filter(function (c) { return c.id === store.current; })[0];
-        if (saved) { recent.push(saved.id); renderChallenge(saved, false); }
+        var saved = byId(pool, store.current);
+        if (saved) { recent.push(saved.id); renderChallenge(saved, { daily: store.currentDaily }); }
       }
+      updateGenerateState();
     }).catch(function (err) {
       var status = $('load-status');
       status.hidden = false;
