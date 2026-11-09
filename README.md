@@ -93,7 +93,7 @@ Other behaviour:
 - On any failure (no network, bad JSON, an unexpected shape, fewer than half the items priced) it prints the reason, leaves `data/` untouched and exits with status 1.
 - Items missing from the price feed keep their previous value and are listed in `meta.json`.
 
-Icons are fetched once per item, ever. For items not yet checked, the script asks the wiki which image files exist in batches of 50 names per request, then downloads each existing icon with a 1 second pause. An item then carries `"icon": "<file>"`, or `"icon": false` if the wiki has no image under the expected name, and is never asked about again. The first run for the current 210 items took about 195 requests; a normal weekly run makes none for icons. To retry an item, delete its `icon` field. To supply an icon by hand, put a PNG in `data/icons/` and set the field to its file name. If the icon step fails part-way, prices are still written and the remaining icons are retried next run.
+Icons are fetched once per item, ever. For items not yet checked, the script asks the wiki which image files exist in batches of 50 names per request, then downloads each existing icon with a 1 second pause. An item then carries `"icon": "<file>"`, or `"icon": false` if the wiki has no image under the expected name, and is never asked about again. The first run for the current 210 items took about 195 requests; a normal weekly run makes none for icons. If the wiki files an item's image under a different name (pets, mostly), give the item an `"icon_file"` with the wiki file name, for example `"Pet Snakeling.png"`. To retry an item, delete its `icon` field. To supply an icon by hand, put a PNG in `data/icons/` and set the field to its file name. If the icon step fails part-way, prices are still written and the remaining icons are retried next run.
 
 Useful flags: `--skip-icons` (prices only), `--offline` (cache only, no requests), `--fixtures scripts/fixtures` (use the recorded sample responses), `--remap` (look every id up again; needed after you add an item by hand with `"id": null`).
 
@@ -141,5 +141,5 @@ Kill speeds, skilling rates and time estimates were written from memory for a ne
 - **Diary laps** use one flat time per difficulty for every area.
 - **Slayer-only bosses** (Cerberus, Kraken, Hydra and so on) appear only in Casual and Standard and are tagged "Needs a Slayer task", since the generator cannot know your current task.
 - Farming is limited to patch runs (herb, tree, fruit tree and so on), where a patch that is still growing counts once visited. There are no Grand Exchange or trading challenges.
-- **Icons**: 21 of the 210 items have no icon, mostly pets, whose image files on the wiki are not named after the item. Those challenges show a category symbol instead.
+- **Icons**: the three made-up "any piece" items have no icon and show a category symbol. Pet icons use hand-entered wiki file names (`icon_file` in `data/items.json`).
 - "No death risk" at Casual means: no Wilderness content, and dying never fails the challenge.

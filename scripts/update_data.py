@@ -208,6 +208,9 @@ def fetch_icons(items, mapping, fetcher, icons_dir):
     asked and has no such image, and absent while still unchecked. Only
     unchecked items cost requests, so a normal weekly run makes none here.
     File existence is looked up in batches of 50 before anything is downloaded.
+    The wiki file is item["icon_file"] if given (for items whose image is not
+    named after the item, such as pets), else the name from /mapping, else
+    "<item name>.png".
     """
     todo = [item for item in items if "icon" not in item][:ICON_MAX_PER_RUN]
     if not todo:
@@ -217,7 +220,7 @@ def fetch_icons(items, mapping, fetcher, icons_dir):
     icon_names = {m.get("name"): m.get("icon") for m in mapping if isinstance(m, dict)}
     wanted = {}
     for item in todo:
-        wanted["File:" + (icon_names.get(item["name"]) or item["name"] + ".png")] = item
+        wanted["File:" + (item.get("icon_file") or icon_names.get(item["name"]) or item["name"] + ".png")] = item
 
     urls = {}
     titles = sorted(wanted)
