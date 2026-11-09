@@ -26,7 +26,7 @@ To host it, enable GitHub Pages for the repository (deploy from the default bran
 | `data/monsters.json` | Bosses, raids, slayer monsters, their rough kills per hour and drop rates, plus slayer masters. Hand-curated. |
 | `data/skills.json` | Skilling activities with rough units per hour. Hand-curated. |
 | `data/minigames.json` | Minigames and activities with rough completions per hour. Hand-curated. |
-| `data/quests.json` | Quests with rough durations, Nightmare Zone quest bosses, speedrun quests, diary areas. Hand-curated. |
+| `data/quests.json` | Quests available on Quest Speedrunning worlds with their trophy times, Nightmare Zone quest bosses, diary areas. Hand-curated. |
 | `data/items.json` | Every item the other files mention. `id` and `value` are filled in by the refresh script. |
 | `data/meta.json` | When and how the item values were last fetched. |
 | `scripts/update_data.py` | Refreshes `items.json` and `meta.json` from the OSRS Wiki. |
@@ -41,7 +41,7 @@ To host it, enable GitHub Pages for the repository (deploy from the default bran
 - **Combat**: "N kills" of a boss, raid or slayer monster, with a tier-dependent rule set (trip limits, no deaths, no special attacks, gear value caps, Wilderness risk), and "N slayer tasks from a master".
 - **Skilling** and **Minigames**: "do N of something", from a relaxed version at Casual to a hard time limit at Hardcore and Extreme. Some minigames add a twist (win every game, no food, and so on).
 - **Pets and rare drops**: "get drop X within N attempts". N is what fits in the tier's time, and a drop is only offered in a tier if the chance of success lands in that tier's band (Casual 25% or better, Standard 15 to 55%, Hardcore 5 to 20%, Extreme 0.8 to 7%).
-- **Quests and diaries**: quests with or without a guide, speedrun-world trophies, Nightmare Zone quest boss rematches, and "victory laps" of achievement diary task lists.
+- **Quests and diaries**: trophy times on Quest Speedrunning worlds, Nightmare Zone quest boss rematches, and "victory laps" of achievement diary task lists. Ordinary quests are not used, because a quest can only be replayed on a speedrunning world.
 
 Counts are always rounded down to a friendly number and the time target is derived from the count, so a challenge can never exceed its tier's window or three hours. Tier windows are 15 to 45 minutes, 45 to 90 minutes, 1.5 to 2.25 hours and 2.25 to 3 hours.
 
@@ -82,7 +82,7 @@ Useful flags: `--offline` (cache only, no requests), `--fixtures scripts/fixture
 
 To add an item, add a line to `data/items.json` with its exact wiki name, `"id": null`, `"tradeable": true`, `"value": null`, and run the script.
 
-The kill speeds, drop rates, skilling rates and quest times are **not** fetched. They are hand-maintained in the other JSON files.
+The kill speeds, drop rates, skilling rates and speedrun trophy times are **not** fetched. They are hand-maintained in the other JSON files.
 
 ### Weekly workflow
 
@@ -112,14 +112,13 @@ Things I could not verify from those pages:
 
 All gameplay numbers were written from memory for a near-maxed account and are deliberately on the slow side so that targets are reachable. They were **not** checked against the wiki page by page (that would have meant a few hundred requests). Treat them as approximate.
 
-- **Kills per hour, skilling rates, minigame lengths and quest times** are rough estimates.
+- **Kills per hour, skilling rates and minigame lengths** are rough estimates.
 - **Drop rates** are the commonly quoted ones. Lower-confidence entries: Dragon warhammer (1/3,000), Glacial temotli (1/100), the Wilderness boss uniques after the 2023 rework, Araxxor uniques (1/600 each), Tormented Demon drops (1/500), and the "any piece" Barrows figure (about 1/15 per chest with all brothers killed).
 - **Tradeability**: an item is marked `tradeable: false` when the price feed had no entry for it on 2026-11-09. That is right for pets and for parts such as Noxious halberd pieces, but an item that is tradeable and simply missing from the feed would be mislabelled (Ancient icon is the one to check).
 - **Sailing** has only two activities, with guessed rates.
-- **Quest speedruns** assume six quests are available on speedrunning worlds and that trophies are bronze, silver, gold and platinum.
+- **Quest speedruns** use the 15 quests and the trophy times listed on the wiki's [Quest Speedrunning](https://oldschool.runescape.wiki/w/Quest_Speedrunning) page as read on 2026-11-09 (one extra page request, made by hand). They are not refreshed by the script, so they will go stale if Jagex changes the times or adds quests. The attempt caps assume about 2 minutes of setup per run.
 - **Nightmare Zone boss rushes** assume a customisable hard rumble can be limited to the listed bosses.
 - **Diary laps** use one flat time per difficulty for every area.
 - **Slayer-only bosses** (Cerberus, Kraken, Hydra and so on) appear only in Casual and Standard and are tagged "Needs a Slayer task", since the generator cannot know your current task.
-- **Quests cannot be repeated**, so quest challenges are tagged "Only if not yet completed: skip freely". Skips are counted separately from failures.
 - There are no Farming challenges (growth timers do not fit a single session) and no Grand Exchange or trading challenges.
 - "No death risk" at Casual means: no Wilderness content, and dying never fails the challenge.

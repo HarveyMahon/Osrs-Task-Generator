@@ -16,7 +16,7 @@
     { id: 'skilling', label: 'Skilling', hint: 'training, gathering, production' },
     { id: 'minigames', label: 'Minigames & activities', hint: 'games, clues, side content' },
     { id: 'luck', label: 'Pets & rare drops', hint: 'luck hunts with an attempt cap' },
-    { id: 'quests', label: 'Quests & diaries', hint: 'quests, rematches, diary laps' }
+    { id: 'quests', label: 'Quests & diaries', hint: 'quest speedruns, boss rematches, diary laps' }
   ];
   var MAX_MINUTES = 180;
   var TIER_ORDER = { casual: 0, standard: 1, hardcore: 2, extreme: 3 };
@@ -278,53 +278,32 @@
 
   function buildQuests(data, out) {
     var q = data.quests;
-    var SKIP_TAG = 'Only if not yet completed: skip freely';
-    q.quests.forEach(function (quest) {
-      var tier = tierForMinutes(quest.minutes);
-      if (tier) {
-        var safe = tier.id === 'casual';
-        out.push({
-          id: ['quests', 'guided', quest.name].join('|'), category: 'quests', kind: 'quest', tier: tier.id,
-          title: 'Quest: ' + quest.name,
-          description: 'Complete ' + quest.name + ' from start to finish in one sitting. Guides are allowed; gather the items first.',
-          rules: safe ? ['One sitting. Deaths only cost you time.'] : ['One sitting.', 'No deaths.'],
-          targetMinutes: quest.minutes, tags: [SKIP_TAG], stake: null,
-          success: 'The "Quest complete" scroll for ' + quest.name + ' appears.',
-          failure: safe ? 'You stop before the quest is complete.' : 'You die at any point, or you stop before the quest is complete.'
-        });
-      }
-      var blind = round5(quest.minutes * 1.8);
-      var btier = blind <= MAX_MINUTES ? tierForMinutes(blind) : null;
-      if (btier) {
-        var bsafe = btier.id === 'casual';
-        out.push({
-          id: ['quests', 'blind', quest.name].join('|'), category: 'quests', kind: 'quest-blind', tier: btier.id,
-          title: 'Blind quest: ' + quest.name,
-          description: 'Complete ' + quest.name + ' the old-fashioned way: by reading the dialogue.',
-          rules: ['No wiki, no video guides, no Quest Helper plugin.'].concat(bsafe ? [] : ['No deaths.']),
-          targetMinutes: blind, tags: [SKIP_TAG], stake: null,
-          success: 'The "Quest complete" scroll for ' + quest.name + ' appears and you never looked anything up.',
-          failure: 'You open a guide of any kind' + (bsafe ? '' : ', you die,') + ' or you stop before the quest is complete.'
-        });
-      }
-    });
-
-    var trophies = [
-      { tier: 'casual', t: 30, goal: 'finish a run (any time)', cap: 1, need: 'the run is completed' },
-      { tier: 'standard', t: 60, goal: 'earn at least a silver trophy', cap: 3, need: 'a silver (or better) trophy time is recorded' },
-      { tier: 'hardcore', t: 105, goal: 'earn at least a gold trophy', cap: 4, need: 'a gold (or better) trophy time is recorded' },
-      { tier: 'extreme', t: 150, goal: 'earn a platinum trophy', cap: 5, need: 'a platinum trophy time is recorded' }
-    ];
-    q.speedrunQuests.forEach(function (name) {
-      trophies.forEach(function (tr) {
-        out.push({
-          id: ['quests', 'speedrun', name, tr.tier].join('|'), category: 'quests', kind: 'speedrun', tier: tr.tier,
-          title: 'Speedrun: ' + name,
-          description: 'Hop to a quest speedrunning world and ' + tr.goal + ' on ' + name + '.',
-          rules: ['You get ' + tr.cap + ' ' + plural('run', tr.cap) + '. Resetting a run uses one up.'],
-          targetMinutes: tr.t, tags: ['Speedrunning world'], stake: null,
-          success: 'Within ' + tr.cap + ' ' + plural('run', tr.cap) + ', ' + tr.need + ' for ' + name + '.',
-          failure: 'Run number ' + tr.cap + ' ends (or is reset) without the goal being met.'
+    // Quests can only be replayed on Quest Speedrunning worlds, so only the
+    // quests offered there are used, with the wiki's trophy times.
+    var trophyTiers = { casual: ['bronze', 'silver'], standard: ['bronze', 'silver', 'gold'], hardcore: ['silver', 'gold', 'platinum'], extreme: ['gold', 'platinum'] };
+    var clock = function (sec) {
+      var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), r = sec % 60;
+      return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (r < 10 ? '0' : '') + r;
+    };
+    q.speedrunQuests.forEach(function (sq) {
+      TIERS.forEach(function (tier) {
+        trophyTiers[tier.id].forEach(function (trophy) {
+          // A run costs at most the trophy time (slower runs get reset) plus ~2 minutes of setup.
+          var perRun = sq[trophy] / 60 + 2;
+          var cap = Math.min(40, Math.floor(tier.durations[1] / perRun));
+          if (cap < 1) return;
+          var t = round5(cap * perRun);
+          if (t < tier.min || t > tier.max) return;
+          var runs = cap + ' ' + plural('run', cap);
+          out.push({
+            id: ['quests', 'speedrun', sq.name, tier.id, trophy].join('|'), category: 'quests', kind: 'speedrun:' + sq.name, tier: tier.id,
+            title: 'Speedrun: ' + sq.name + ' (' + trophy + ')',
+            description: 'Hop to a Quest Speedrunning world and beat the ' + trophy + ' trophy time of ' + clock(sq[trophy]) + ' on ' + sq.name + ', within ' + runs + '.',
+            rules: ['You get ' + runs + '. Starting a run uses one up, even if you reset it.'],
+            targetMinutes: t, tags: ['Speedrunning world'], stake: null,
+            success: 'One of your ' + runs + ' finishes ' + sq.name + ' in ' + clock(sq[trophy]) + ' or faster.',
+            failure: 'Run number ' + cap + ' ends (or is reset) without beating ' + clock(sq[trophy]) + '.'
+          });
         });
       });
     });
