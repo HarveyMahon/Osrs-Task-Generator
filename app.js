@@ -314,7 +314,7 @@
         id: ['quests', 'nmz', b.name].join('|'), category: 'quests', kind: 'nmz', tier: 'casual',
         title: 'Dream rematch: ' + b.name,
         description: 'Start a hard customisable rumble in the Nightmare Zone with ' + b.name + ' (' + b.quest + ') enabled, and beat them again.',
-        rules: ['No overhead protection prayers.', 'No absorption or overload potions.', 'Getting knocked out in the dream is safe; it just ends the attempt.'],
+        rules: ['No absorption or overload potions.', 'Getting knocked out in the dream is safe; it just ends the attempt.'],
         targetMinutes: 15, tags: ['Needs ' + b.quest + ' completed'], stake: null,
         success: b.name + ' is defeated in a hard rumble with the rules kept.',
         failure: 'You wake up (knocked out or leaving by choice) before ' + b.name + ' is defeated, or you break a rule.'
@@ -334,7 +334,7 @@
         });
       }
     }
-    rush(5, 1, 'standard', 50, ['No absorption or overload potions.', 'No overhead protection prayers.']);
+    rush(5, 1, 'standard', 50, ['No absorption or overload potions.']);
     rush(10, 2, 'hardcore', 95, ['No dream potions (absorption, overload, super ranging, super magic).']);
     rush(20, 5, 'extreme', 150, ['No dream potions.', 'No power-ups.']);
 
