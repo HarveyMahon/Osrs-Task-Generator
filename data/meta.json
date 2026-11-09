@@ -1,0 +1,12 @@
+{
+  "fetched_at": "2026-11-09T20:11:50Z",
+  "fetched_date": "2026-11-09",
+  "source": "OSRS Wiki real-time prices API (https://prices.runescape.wiki/api/v2/osrs)",
+  "source_mode": "network",
+  "requests_made": 1,
+  "items_tracked": 169,
+  "items_priced": 113,
+  "items_without_price": [],
+  "items_not_in_mapping": [],
+  "user_agent": "osrs-task-generator-data-refresh/1.0 (+https://github.com/harveymahon/osrs-task-generator; weekly item-price refresh for a static fan site)"
+}

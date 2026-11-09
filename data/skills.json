@@ -1,0 +1,118 @@
+{
+  "_note": "Hand-curated. perHour = rough units per hour for a near-maxed player using a normal (non tick-perfect) method, rounded down. In task strings {n} is the count and {s} a plural 's'. consumes = tradeable item used up once per unit (used for the gp-at-stake line).",
+  "skills": [
+    {"skill": "Mining", "activities": [
+      {"task": "Mine {n} amethyst", "perHour": 85},
+      {"task": "Mine {n} pay-dirt in the Motherlode Mine", "perHour": 250},
+      {"task": "Mine {n} runite ore", "perHour": 55},
+      {"task": "Power-mine {n} iron ore", "perHour": 1200}
+    ]},
+    {"skill": "Fishing", "activities": [
+      {"task": "Catch {n} raw karambwan", "perHour": 500},
+      {"task": "Catch {n} raw anglerfish", "perHour": 180},
+      {"task": "Catch {n} minnows", "perHour": 3000},
+      {"task": "Catch {n} infernal eels", "perHour": 270},
+      {"task": "Catch {n} sacred eels", "perHour": 250},
+      {"task": "Catch {n} raw monkfish", "perHour": 380},
+      {"task": "Catch {n} raw sharks", "perHour": 200},
+      {"task": "Catch {n} fish with barbarian fishing at Otto's Grotto", "perHour": 800},
+      {"task": "Catch {n} fish by aerial fishing on Molch Island", "perHour": 900},
+      {"task": "Catch {n} raw dark crabs in the Wilderness", "perHour": 220, "wilderness": true}
+    ]},
+    {"skill": "Woodcutting", "activities": [
+      {"task": "Chop {n} redwood logs", "perHour": 140},
+      {"task": "Chop {n} magic logs", "perHour": 120},
+      {"task": "Chop {n} yew logs", "perHour": 230},
+      {"task": "Chop {n} teak logs", "perHour": 500},
+      {"task": "Chop {n} mahogany logs", "perHour": 300}
+    ]},
+    {"skill": "Runecraft", "activities": [
+      {"task": "Craft {n} essence into blood runes", "perHour": 2400},
+      {"task": "Craft {n} essence into soul runes", "perHour": 2200},
+      {"task": "Craft {n} essence into wrath runes", "perHour": 1300},
+      {"task": "Craft {n} essence into lava runes", "perHour": 3200},
+      {"task": "Craft {n} essence into death runes via the Abyss", "perHour": 2400, "wilderness": true},
+      {"task": "Craft {n} essence into nature runes via the Abyss", "perHour": 2500, "wilderness": true},
+      {"task": "Craft {n} essence into astral runes", "perHour": 3000},
+      {"task": "Craft {n} essence at the Ourania Altar", "perHour": 3000}
+    ]},
+    {"skill": "Agility", "activities": [
+      {"task": "Run {n} lap{s} of the Ardougne Rooftop Course", "perHour": 55},
+      {"task": "Run {n} lap{s} of the Rellekka Rooftop Course", "perHour": 48},
+      {"task": "Run {n} lap{s} of the Seers' Village Rooftop Course", "perHour": 70},
+      {"task": "Run {n} lap{s} of the Pollnivneach Rooftop Course", "perHour": 52},
+      {"task": "Run {n} lap{s} of the Canifis Rooftop Course", "perHour": 70},
+      {"task": "Run {n} lap{s} of the Falador Rooftop Course", "perHour": 55},
+      {"task": "Run {n} lap{s} of the Prifddinas Agility Course", "perHour": 44},
+      {"task": "Run {n} lap{s} of the Ape Atoll Agility Course", "perHour": 80},
+      {"task": "Run {n} lap{s} of the Werewolf Agility Course", "perHour": 70},
+      {"task": "Climb the Agility Pyramid {n} time{s}", "perHour": 10},
+      {"task": "Run {n} lap{s} of the Wilderness Agility Course", "perHour": 80, "wilderness": true}
+    ]},
+    {"skill": "Thieving", "activities": [
+      {"task": "Successfully pickpocket Ardougne knights {n} times", "perHour": 2800},
+      {"task": "Successfully pickpocket master farmers {n} times", "perHour": 1000},
+      {"task": "Successfully pickpocket vyres in Darkmeyer {n} times", "perHour": 1600},
+      {"task": "Successfully pickpocket elves in Prifddinas {n} times", "perHour": 800},
+      {"task": "Successfully pickpocket TzHaar-Hur {n} times", "perHour": 1500},
+      {"task": "Deliver {n} stolen artefact{s} in Port Piscarilius", "perHour": 60},
+      {"task": "Loot {n} chests in the Rogues' Castle", "perHour": 240, "wilderness": true}
+    ]},
+    {"skill": "Hunter", "activities": [
+      {"task": "Catch {n} red chinchompas", "perHour": 320},
+      {"task": "Catch {n} black chinchompas", "perHour": 380, "wilderness": true},
+      {"task": "Harvest {n} herbiboar{s}", "perHour": 55},
+      {"task": "Trap {n} maniacal monkeys", "perHour": 700},
+      {"task": "Catch {n} red salamanders", "perHour": 250},
+      {"task": "Complete {n} Hunter rumour{s}", "perHour": 9}
+    ]},
+    {"skill": "Cooking", "activities": [
+      {"task": "Cook {n} karambwan", "perHour": 1300},
+      {"task": "Cook {n} sharks", "perHour": 1300},
+      {"task": "Cook {n} anglerfish", "perHour": 1300}
+    ]},
+    {"skill": "Firemaking", "activities": [
+      {"task": "Burn {n} magic logs, one at a time", "perHour": 1300, "consumes": "Magic logs"},
+      {"task": "Burn {n} redwood logs, one at a time", "perHour": 1300, "consumes": "Redwood logs"}
+    ]},
+    {"skill": "Fletching", "activities": [
+      {"task": "Cut {n} magic longbows (u)", "perHour": 1600, "consumes": "Magic logs"},
+      {"task": "String {n} magic longbows", "perHour": 2300}
+    ]},
+    {"skill": "Herblore", "activities": [
+      {"task": "Mix {n} super combat potions", "perHour": 2300},
+      {"task": "Mix {n} Saradomin brews", "perHour": 2300},
+      {"task": "Mix {n} ranging potions", "perHour": 2300},
+      {"task": "Clean {n} grimy herbs by hand", "perHour": 4500}
+    ]},
+    {"skill": "Crafting", "activities": [
+      {"task": "Craft {n} black d'hide bodies", "perHour": 1650},
+      {"task": "Assemble {n} battlestaves", "perHour": 2400},
+      {"task": "Cut {n} dragonstones", "perHour": 2600, "consumes": "Uncut dragonstone"},
+      {"task": "Blow {n} unpowered orbs", "perHour": 1700}
+    ]},
+    {"skill": "Smithing", "activities": [
+      {"task": "Smelt {n} runite bars at the Blast Furnace", "perHour": 2500},
+      {"task": "Smelt {n} gold bars at the Blast Furnace", "perHour": 5000},
+      {"task": "Smith {n} adamant platebodies", "perHour": 170}
+    ]},
+    {"skill": "Prayer", "activities": [
+      {"task": "Offer {n} dragon bones at a gilded altar", "perHour": 2200, "consumes": "Dragon bones"},
+      {"task": "Offer {n} superior dragon bones at a gilded altar", "perHour": 2200, "consumes": "Superior dragon bones"},
+      {"task": "Offer {n} dragon bones at the Wilderness Chaos Altar", "perHour": 1200, "wilderness": true, "consumes": "Dragon bones"}
+    ]},
+    {"skill": "Magic", "activities": [
+      {"task": "Cast High Level Alchemy {n} times", "perHour": 1150},
+      {"task": "Plank Make {n} mahogany logs", "perHour": 1750, "consumes": "Mahogany logs"},
+      {"task": "Cast String Jewellery on {n} amulets", "perHour": 1500}
+    ]},
+    {"skill": "Construction", "activities": [
+      {"task": "Build (and remove) {n} mahogany tables", "perHour": 400, "consumes": "Mahogany plank", "consumesPer": 6},
+      {"task": "Build (and remove) {n} oak larders", "perHour": 420, "consumes": "Oak plank", "consumesPer": 8}
+    ]},
+    {"skill": "Sailing", "activities": [
+      {"task": "Complete {n} run{s} of the Tempor Tantrum Barracuda Trial", "perHour": 12},
+      {"task": "Complete {n} port task{s}", "perHour": 8}
+    ]}
+  ]
+}

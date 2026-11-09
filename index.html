@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSRS Task Generator</title>
+  <meta name="description" content="Roll a random Old School RuneScape challenge for your next session: pick an intensity, pick your categories, and go.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#challenge-area">Skip to the challenge</a>
+
+  <header class="site-header">
+    <p class="logo" aria-hidden="true">🎲</p>
+    <h1>OSRS Task Generator</h1>
+    <p class="tagline">Can't decide what to grind? Let the dice ruin your evening.</p>
+  </header>
+
+  <main>
+    <form id="controls" class="card" onsubmit="return false">
+      <fieldset>
+        <legend>1. How spicy?</legend>
+        <div id="tier-options" class="choices choices-tier"></div>
+      </fieldset>
+      <fieldset>
+        <legend>2. What's on the menu?</legend>
+        <div id="category-options" class="choices"></div>
+      </fieldset>
+      <div class="roll-row">
+        <button type="button" id="generate" class="btn btn-primary" disabled>Generate challenge</button>
+        <p id="pool-note" class="muted" aria-live="polite"></p>
+      </div>
+      <p id="load-status" class="notice" role="status">Loading challenge data…</p>
+    </form>
+
+    <section id="challenge-area" class="card challenge-card" aria-labelledby="challenge-heading">
+      <h2 id="challenge-heading" class="visually-hidden">Your challenge</h2>
+
+      <div id="empty-state" class="empty">
+        <p class="empty-art" aria-hidden="true">🐔</p>
+        <p>No challenge yet. Pick your poison above and hit <strong>Generate challenge</strong>.</p>
+      </div>
+
+      <article id="challenge" hidden>
+        <ul id="challenge-badges" class="badges" aria-label="Challenge tags"></ul>
+        <h3 id="challenge-title" tabindex="-1"></h3>
+        <p id="challenge-description" class="lead"></p>
+
+        <h4>Rules</h4>
+        <ul id="challenge-rules" class="rules"></ul>
+
+        <dl class="facts">
+          <div class="fact fact-time">
+            <dt><span aria-hidden="true">⏱️ </span>Target time</dt>
+            <dd><span id="challenge-time"></span> <span class="muted">(a soft target: running over is not a fail unless a rule says so)</span></dd>
+          </div>
+          <div class="fact fact-success">
+            <dt><span aria-hidden="true">✅ </span>You succeed when</dt>
+            <dd id="challenge-success"></dd>
+          </div>
+          <div class="fact fact-failure">
+            <dt><span aria-hidden="true">💀 </span>You fail when</dt>
+            <dd id="challenge-failure"></dd>
+          </div>
+          <div class="fact fact-stake" id="stake-row" hidden>
+            <dt><span aria-hidden="true">💰 </span>Gp at stake</dt>
+            <dd id="challenge-stake"></dd>
+          </div>
+        </dl>
+
+        <p id="challenge-quip" class="quip"></p>
+
+        <div class="timer" role="group" aria-label="Optional stopwatch">
+          <span id="timer-readout" class="timer-readout" role="timer" aria-live="off">0:00:00</span>
+          <button type="button" id="timer-toggle" class="btn btn-small" aria-pressed="false">Start timer</button>
+          <button type="button" id="timer-reset" class="btn btn-small btn-ghost">Reset</button>
+          <span id="timer-note" class="muted timer-note"></span>
+        </div>
+
+        <div class="actions" role="group" aria-label="How did it go?">
+          <button type="button" id="mark-completed" class="btn btn-good">Completed</button>
+          <button type="button" id="mark-failed" class="btn btn-bad">Failed</button>
+          <button type="button" id="mark-skipped" class="btn btn-ghost">Skip</button>
+        </div>
+        <p class="muted small">You can mark it failed whenever you like, even if no failure rule was hit. Honour system. We trust you. Mostly.</p>
+      </article>
+      <p id="outcome" class="outcome" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card" aria-labelledby="stats-heading">
+      <h2 id="stats-heading">Your record</h2>
+      <p class="muted"><span id="stats-summary"></span>. Saved in this browser only.</p>
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Results per intensity tier</caption>
+          <thead><tr><th scope="col">Tier</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th></tr></thead>
+          <tbody id="stats-tiers"></tbody>
+        </table>
+      </div>
+      <details>
+        <summary>Results per category</summary>
+        <div class="table-wrap">
+          <table>
+            <caption class="visually-hidden">Results per category</caption>
+            <thead><tr><th scope="col">Category</th><th scope="col">Completed</th><th scope="col">Failed</th><th scope="col">Skipped</th></tr></thead>
+            <tbody id="stats-categories"></tbody>
+          </table>
+        </div>
+      </details>
+      <button type="button" id="reset-stats" class="btn btn-small btn-ghost">Reset stats</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><span id="pool-size">0</span> challenges in the pool. Item values are approximate, refreshed <span id="data-date">…</span> from the <a href="https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices">OSRS Wiki real-time prices</a>. Kill speeds, drop rates and time estimates are hand-curated guesses for a near-maxed account.</p>
+    <p>Unofficial fan project. Not affiliated with or endorsed by Jagex. Old School RuneScape is a trademark of Jagex Ltd.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
