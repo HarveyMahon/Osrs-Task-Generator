@@ -40,6 +40,19 @@ for (const c of pool) {
   if (c.kind === 'grind' && !/Hard limit/.test(c.rules.join(' '))) problems.push(`${c.id}: grind without a time limit`);
 }
 
+// 2b. Regressions found in review: Casual must stay gentle, clue stacks are capped, wording stays human.
+const hardNames = data.monsters.monsters.filter((m) => m.hard).map((m) => m.name);
+for (const c of pool) {
+  const text = [c.title, c.description, c.success, c.failure].concat(c.rules).join(' ');
+  if (c.tier === 'casual' && /death counts|deaths? count as/i.test(text)) problems.push(`${c.id}: Casual challenge where a death counts against you`);
+  if (c.tier === 'casual' && c.category !== 'quests' && hardNames.includes(c.subject)) problems.push(`${c.id}: endgame content in Casual`);
+  if (/\b(of|your) 1 run\b|Rack up 1 |\bthe Iban's\b/.test(text)) problems.push(`${c.id}: clumsy wording: ${text.slice(0, 80)}`);
+}
+for (const mg of data.minigames.minigames) {
+  if (!mg.max) continue;
+  for (const c of pool) if (c.kind === 'mg:' + mg.name && Number((/\b(\d+)\b/.exec(c.description) || [])[1]) > mg.max) problems.push(`${c.id}: exceeds the stack cap of ${mg.max}`);
+}
+
 // 3. Pool sizes per tier x category, and distinct challenges overall.
 console.log(`Pool: ${pool.length} distinct challenges`);
 const header = ['tier'.padEnd(10)].concat(gen.CATEGORIES.map((c) => c.id.padStart(10))).join('');

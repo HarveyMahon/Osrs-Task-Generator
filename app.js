@@ -85,20 +85,21 @@
     var tags = mon.tags || [], mods = [];
     var has = function (x) { return tags.indexOf(x) !== -1; };
     var trips;
-    if (mon.type === 'raid') {
-      // No banking inside these, so trip limits make no sense.
+    if (mon.type === 'raid' || mon.noTrips) {
+      // No banking that matters here, so trip limits make no sense.
+      var noDeaths = 'No deaths' + (mon.team ? ' (yours; a teammate dying does not count).' : '.');
       if (tier.id === 'casual') return [{ key: 'chill', name: 'Easy does it', eff: 1, rules: ['Any gear, any method. Failed attempts only cost you time.'], fail: STOP_FAIL }];
-      if (tier.id === 'extreme') return [{ key: 'iron', name: 'Iron will', eff: 1, rules: ['No special attacks.', 'No deaths (yours, if you are in a team).'], fail: 'You die, or you use a special attack.' }];
-      return [{ key: 'deathless', name: 'Clean sheet', eff: 1, rules: ['No deaths (yours, if you are in a team).'], fail: 'You die before the count is reached.' }];
+      if (tier.id === 'extreme' && !mon.noSpecs) return [{ key: 'iron', name: 'Iron will', eff: 1, rules: ['No special attacks.', noDeaths], fail: 'You die, or you use a special attack.' }];
+      return [{ key: 'deathless', name: 'Clean sheet', eff: 1, rules: [noDeaths], fail: 'You die before the count is reached.' }];
     }
     if (mon.wilderness) {
       if (tier.id === 'standard') mods.push({ key: 'alive', name: 'Get out alive', eff: 1, rules: ['No deaths. PKers count.'], fail: 'You die, to the boss or to another player.' });
       if (tier.id === 'hardcore') {
-        mods.push({ key: 'risk', name: 'Risky business', eff: 1, rules: ['Carry at least ' + gp('Bandos chestplate') + ' of unprotected risk the whole time (about one Bandos chestplate).', 'No deaths.'], fail: 'You die, or you are caught carrying less risk than agreed.', stake: 'About ' + gp('Bandos chestplate') + ' at risk in the Wilderness.' });
+        mods.push({ key: 'risk', name: 'Risky business', eff: 1, rules: ['Carry at least ' + gp('Bandos chestplate') + ' of unprotected risk the whole time (about one Bandos chestplate).', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + gp('Bandos chestplate') + ' at risk in the Wilderness.' });
         mods.push({ key: 'nospec', name: 'No specs, no slip-ups', eff: 0.9, rules: ['No special attacks.', 'No deaths. PKers count.'], fail: 'You die, or you use a special attack.' });
       }
       if (tier.id === 'extreme') {
-        mods.push({ key: 'bigrisk', name: 'High roller', eff: 1, rules: ['Carry at least ' + gp('Amulet of torture') + ' of unprotected risk the whole time (about one Amulet of torture).', 'No deaths.'], fail: 'You die, or you are caught carrying less risk than agreed.', stake: 'About ' + gp('Amulet of torture') + ' at risk in the Wilderness.' });
+        mods.push({ key: 'bigrisk', name: 'High roller', eff: 1, rules: ['Carry at least ' + gp('Amulet of torture') + ' of unprotected risk the whole time (about one Amulet of torture).', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + gp('Amulet of torture') + ' at risk in the Wilderness.' });
         mods.push({ key: 'iron', name: 'Iron will', eff: 0.85, rules: ['No special attacks.', 'No teleporting out to restock more than twice.', 'No deaths. PKers count.'], fail: 'You die, use a special attack, or restock a third time.' });
       }
       return mods;
@@ -106,7 +107,7 @@
     if (tier.id === 'casual') {
       trips = Math.max(2, Math.ceil(t / 15));
       mods.push({ key: 'chill', name: 'Easy does it', eff: 1, rules: ['Any gear, any method. Deaths only cost you time.'], fail: STOP_FAIL });
-      mods.push({ key: 'trips', name: 'Tidy trips', eff: 1, rules: ['Use at most ' + trips + ' bank trips. A death counts as a trip.'], fail: 'You need bank trip number ' + (trips + 1) + ' before the count is reached.' });
+      mods.push({ key: 'trips', name: 'Tidy trips', eff: 1, rules: ['Use at most ' + trips + ' bank trips. Deaths do not count against you.'], fail: 'You need bank trip number ' + (trips + 1) + ' before the count is reached.' });
     } else if (tier.id === 'standard') {
       trips = Math.max(2, Math.ceil(t / 25));
       mods.push({ key: 'deathless', name: 'Clean sheet', eff: 1, rules: ['No deaths.'], fail: 'You die before the count is reached.' });
@@ -115,12 +116,12 @@
       trips = Math.max(2, Math.ceil(t / 40));
       mods.push({ key: 'nospec', name: 'No specs, no slip-ups', eff: 0.9, rules: ['No special attacks.', 'No deaths.'], fail: 'You die, or you use a special attack.' });
       mods.push({ key: 'supply', name: 'Supply run', eff: 0.85, rules: ['Use at most ' + trips + ' bank trips.', 'No deaths.'], fail: 'You die, or you need bank trip number ' + (trips + 1) + '.' });
-      if (has('budget')) mods.push({ key: 'budget', name: 'Budget build', eff: 0.6, rules: ['No equipped item may be worth more than an Abyssal whip (about ' + gp('Abyssal whip') + ').', 'No deaths.'], fail: 'You die, or you equip anything worth more than an Abyssal whip.', stake: 'Gear cap: about ' + gp('Abyssal whip') + ' per item.' });
+      if (has('budget')) mods.push({ key: 'budget', name: 'Budget build', eff: 0.6, rules: ['No equipped tradeable item may be worth more than an Abyssal whip (about ' + gp('Abyssal whip') + '). Untradeables are fine.', 'No deaths.'], fail: 'You die, or you equip anything worth more than an Abyssal whip.', stake: 'Gear cap: about ' + gp('Abyssal whip') + ' per item.' });
     } else {
       trips = Math.max(2, Math.ceil(t / 60));
       mods.push({ key: 'iron', name: 'Iron will', eff: 0.85, rules: ['No special attacks.', 'Use at most ' + trips + ' bank trips.', 'No deaths.'], fail: 'You die, use a special attack, or need bank trip number ' + (trips + 1) + '.' });
       if (has('nofood')) mods.push({ key: 'nofood', name: 'No snacks', eff: 0.8, rules: ['No food or Saradomin brews in your inventory, ever. Prayer potions are fine.', 'No deaths.'], fail: 'You die, or you eat or drink anything that heals.' });
-      if (has('budget')) mods.push({ key: 'rune', name: 'Rune-tier cosplay', eff: 0.4, rules: ['No equipped item may be worth more than a Rune platebody (about ' + gp('Rune platebody') + ').', 'No deaths.'], fail: 'You die, or you equip anything worth more than a Rune platebody.', stake: 'Gear cap: about ' + gp('Rune platebody') + ' per item.' });
+      if (has('budget')) mods.push({ key: 'rune', name: 'Rune-tier cosplay', eff: 0.4, rules: ['No equipped tradeable item may be worth more than a Rune platebody (about ' + gp('Rune platebody') + '). Untradeables are fine.', 'No deaths.'], fail: 'You die, or you equip anything worth more than a Rune platebody.', stake: 'Gear cap: about ' + gp('Rune platebody') + ' per item.' });
     }
     return mods;
   }
@@ -142,7 +143,7 @@
     data.monsters.monsters.forEach(function (mon) {
       if (mon.type === 'other') return;
       TIERS.forEach(function (tier) {
-        if (mon.wilderness && tier.id === 'casual') return;
+        if ((mon.wilderness || mon.hard) && tier.id === 'casual') return;
         if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
         if (mon.type === 'slayer' && !mon.profitable && tier.id !== 'casual') return;
         // Mods are chosen from the slot length, then the count is scaled by the mod's efficiency.
@@ -157,13 +158,14 @@
             var tags = [];
             if (mon.wilderness) tags.push('Wilderness');
             if (mon.team) tags.push('Team content');
-            if (mon.taskOnly) tags.push('Needs a Slayer task');
+            if (mon.others) tags.push('Needs other players');
+      if (mon.taskOnly) tags.push('Needs a Slayer task');
             if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
             out.push({
               id: id,
               category: 'combat', kind: 'count:' + mon.type, tier: tier.id,
               title: fmtNum(c.n) + ' ' + labels + ': ' + mod.name,
-              description: 'Rack up ' + fmtNum(c.n) + ' ' + labels + '.',
+              description: (c.n === 1 ? 'Get one ' + mon.label + ' done.' : 'Rack up ' + fmtNum(c.n) + ' ' + labels + '.'),
               rules: mod.rules, targetMinutes: c.t, tags: tags, stake: mod.stake || null,
               iconItems: mon.drops.map(function (dr) { return dr.item; }),
               success: 'Your kill count or loot tracker shows ' + fmtNum(c.n) + ' new ' + labels + ' since you started, with every rule kept.',
@@ -180,12 +182,13 @@
       var tags = [];
       if (mon.wilderness) tags.push('Wilderness');
       if (mon.team) tags.push('Team content');
+      if (mon.others) tags.push('Needs other players');
       if (mon.taskOnly) tags.push('Needs a Slayer task');
       if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
       var icons = mon.drops.map(function (dr) { return dr.item; });
       var pk = mon.wilderness ? ' PKers count.' : '';
       TIERS.forEach(function (tier) {
-        if (mon.wilderness && tier.id === 'casual') return;
+        if ((mon.wilderness || mon.hard) && tier.id === 'casual') return;
         if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
         var safe = tier.id === 'casual';
         var mid = tier.durations[1];
@@ -198,7 +201,7 @@
             category: 'combat', kind: 'pb', tier: tier.id,
             title: 'Beat your best: ' + mon.name,
             description: 'Set a new personal best time at ' + mon.name + ' within ' + attempts + '.',
-            rules: ['Note your current in-game personal best before you start.'].concat(safe ? ['Deaths only cost you an attempt.'] : ['No deaths.' + pk]),
+            rules: ['Note your current in-game personal best before you start.', 'If your record is already near the limit, skip this one.'].concat(safe ? ['Deaths only cost you an attempt.'] : ['No deaths.' + pk]),
             targetMinutes: c.t, tags: tags.concat(['Depends on your record']), stake: null, iconItems: icons,
             success: 'The game announces a new personal best on or before attempt ' + fmtNum(c.n) + '.',
             failure: 'You finish ' + attempts + ' without a new personal best' + (safe ? '.' : ', or you die.')
@@ -228,15 +231,16 @@
         if (mon.weapons && tier.id !== 'extreme' && (c = makeCount(mon.perHour * 0.6, mid, tier))) {
           mon.weapons.forEach(function (weapon) {
             var labels = plural(mon.label, c.n);
+            var the = /'s /.test(weapon) ? '' : 'the '; // "Iban's staff", not "the Iban's staff"
             out.push({
               id: ['combat', 'weapon', mon.name, tier.id, weapon].join('|'), subject: mon.name, variant: 'weapon',
               category: 'combat', kind: 'weapon', tier: tier.id,
               title: fmtNum(c.n) + ' ' + labels + ': ' + weapon + ' only',
-              description: 'Rack up ' + fmtNum(c.n) + ' ' + labels + ' using nothing but the ' + weapon + '.',
-              rules: ['Every hit must come from the ' + weapon + ': no other weapons, spells, thralls or cannon.', 'Its special attack is fine, if it has one.'].concat(safe ? ['Deaths only cost you time.'] : ['No deaths.' + pk]),
+              description: 'Rack up ' + fmtNum(c.n) + ' ' + labels + ' using nothing but ' + the + weapon + '.',
+              rules: ['Every hit must come from ' + the + weapon + ': no other weapons, spells, thralls or cannon.'].concat(safe ? ['Deaths only cost you time.'] : ['No deaths.' + pk]),
               targetMinutes: c.t, tags: tags, stake: null, iconItems: [weapon],
-              success: fmtNum(c.n) + ' new ' + labels + ' are logged, every one with the ' + weapon + ' alone.',
-              failure: (safe ? 'You' : 'You die, or you') + ' damage the target with anything other than the ' + weapon + '.'
+              success: fmtNum(c.n) + ' new ' + labels + ' are logged, every one with ' + the + weapon + ' alone.',
+              failure: (safe ? 'You' : 'You die, or you') + ' damage the target with anything other than ' + the + weapon + '.'
             });
           });
         }
@@ -321,19 +325,22 @@
       if (mon.team) return;
       mon.drops.forEach(function (drop) {
         TIERS.forEach(function (tier) {
-          if (mon.wilderness && tier.id === 'casual') return;
+          if ((mon.wilderness || mon.hard) && tier.id === 'casual') return;
           if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
           if (mon.type === 'slayer' && !mon.profitable && tier.id !== 'casual') return;
           var c = makeCount(mon.perHour, tier.luckMinutes, tier);
           if (!c) return;
-          var chance = 1 - Math.pow(1 - 1 / drop.rate, c.n);
+          var rolls = drop.rolls || 1;
+          var chance = 1 - Math.pow(1 - 1 / drop.rate, c.n * rolls);
+          var rateText = 'roughly 1/' + fmtNum(drop.rate) + (rolls > 1 ? ' per roll with ' + rolls + ' rolls a kill' : '');
           if (chance < tier.luckBand[0] || chance > tier.luckBand[1]) return;
           var labels = plural(mon.label, c.n);
           var pct = chance >= 0.1 ? Math.round(chance * 100) : Math.round(chance * 1000) / 10;
           var value = gp(drop.item);
           var tags = ['About ' + pct + '% chance'];
           if (mon.wilderness) tags.push('Wilderness');
-          if (mon.taskOnly) tags.push('Needs a Slayer task');
+          if (mon.others) tags.push('Needs other players');
+      if (mon.taskOnly) tags.push('Needs a Slayer task');
           if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
           if (chance < 0.05) {
             // A long shot: the grind itself is the challenge and the drop is a bonus.
@@ -343,7 +350,7 @@
               id: ['luck', mon.name, drop.item, tier.id, 'grind'].join('|'), subject: mon.name, variant: 'grind',
               category: 'luck', kind: 'grind', tier: tier.id,
               title: 'Start the ' + drop.item + ' grind',
-              description: 'Put in ' + fmtNum(c.n) + ' ' + labels + ' for "' + drop.item + '" within ' + limit + '. At roughly 1/' + fmtNum(drop.rate) + ' there is about a ' + pct + '% chance it drops today, and every attempt counts towards the day it does.',
+              description: 'Put in ' + fmtNum(c.n) + ' ' + labels + ' for "' + drop.item + '" within ' + limit + '. At ' + rateText + ' there is about a ' + pct + '% chance it drops today, and every attempt counts towards the day it does.',
               rules: ['Hard limit: ' + limit + ' from your first attempt.'].concat(drop.note ? [drop.note] : []),
               targetMinutes: c.t, tags: tags, iconItems: [drop.item], stake: null,
               success: fmtNum(c.n) + ' new ' + labels + ' are logged within ' + limit + '. The drop itself is a bonus.',
@@ -355,7 +362,7 @@
             id: ['luck', mon.name, drop.item, tier.id].join('|'),
             category: 'luck', kind: 'hunt:' + mon.type, tier: tier.id,
             title: drop.item + ' hunt',
-            description: 'Get "' + drop.item + '" from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is roughly 1/' + fmtNum(drop.rate) + ', so your odds are about ' + pct + '%.',
+            description: 'Get "' + drop.item + '" from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is ' + rateText + ', so your odds are about ' + pct + '%.',
             rules: ['Count attempts from zero, starting now.'].concat(isPet(drop.item) ? ['A duplicate-pet message ("you have a funny feeling like you would have been followed") counts.'] : []).concat(drop.note ? [drop.note] : []),
             targetMinutes: c.t, tags: tags, iconItems: [drop.item],
             stake: value ? 'The prize is worth about ' + value + '.' : null,
@@ -370,22 +377,24 @@
   function buildLogSlots(data, out) {
     data.monsters.monsters.forEach(function (mon) {
       if (mon.team || (mon.type !== 'boss' && mon.type !== 'raid') || /\(/.test(mon.name)) return;
+      if (mon.flag === 'waves' || mon.drops.length < 2) return; // the only realistic slot there is a pet
       TIERS.forEach(function (tier) {
-        if (mon.wilderness && tier.id === 'casual') return;
+        if ((mon.wilderness || mon.hard) && tier.id === 'casual') return;
         if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
         var c = makeCount(mon.perHour, tier.luckMinutes, tier);
         if (!c) return;
         var labels = plural(mon.label, c.n);
         var tags = ['Depends on your log'];
         if (mon.wilderness) tags.push('Wilderness');
-        if (mon.taskOnly) tags.push('Needs a Slayer task');
+        if (mon.others) tags.push('Needs other players');
+      if (mon.taskOnly) tags.push('Needs a Slayer task');
         if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
         out.push({
           id: ['luck', mon.name, 'log slot', tier.id].join('|'), subject: mon.name, variant: 'log',
           category: 'luck', kind: 'log', tier: tier.id,
           title: 'New log slot: ' + mon.name,
           description: 'Fill any new collection log slot from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '.',
-          rules: ['Count attempts from zero, starting now.', 'Any slot on that page counts, however humble.'],
+          rules: ['Count attempts from zero, starting now.', 'Any slot on that page counts, however humble.', 'Log already full here? Skip this one: it is not meant for you.'],
           targetMinutes: c.t, tags: tags, stake: null, iconItems: mon.drops.map(function (dr) { return dr.item; }),
           success: 'A "New item added to your collection log" message for ' + mon.name + ' appears on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
           failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without a new slot.'
@@ -405,7 +414,7 @@
       { key: 'clock', name: 'beat the clock', rules: ['Hard limit: ' + fmtMinutes(Math.min(MAX_MINUTES, round5(c.t * 1.25))) + ' from your first action.'], fail: 'The count is not reached within ' + fmtMinutes(Math.min(MAX_MINUTES, round5(c.t * 1.25))) + '.' + die }
     ];
     if (tier.id === 'hardcore') return [{ key: 'race', name: 'race pace', rules: ['Hard limit: ' + fmtMinutes(cap) + ' from your first action.', 'One sitting, no unrelated activities.'], fail: 'The count is not reached within ' + fmtMinutes(cap) + ', or you wander off to do something else.' + die }];
-    return [{ key: 'marathon', name: 'marathon', rules: ['Hard limit: ' + fmtMinutes(cap) + ' from your first action.', 'No break longer than 2 minutes.'], fail: 'The count is not reached within ' + fmtMinutes(cap) + ', or you stop for more than 2 minutes.' + die }];
+    return [{ key: 'marathon', name: 'marathon', rules: ['Hard limit: ' + fmtMinutes(cap) + ' from your first action.', 'Stay logged in throughout: the idle logout timer is the referee.'], fail: 'The count is not reached within ' + fmtMinutes(cap) + ', or you log out or get logged out for idling.' + die }];
   }
 
   function buildSkilling(data, gp, valueOf, out) {
@@ -462,7 +471,7 @@
                 description: what + '.',
                 rules: v.rules, targetMinutes: c.t, tags: act.wilderness ? ['Wilderness'] : [], stake: stake,
                 iconItems: [act.item, act.consumes],
-                success: 'You have done it: ' + what.charAt(0).toLowerCase() + what.slice(1) + ', counted from when you started.',
+                success: 'The task as written is complete ("' + what + '"), counted from when you started.',
                 failure: v.fail
               });
             });
@@ -476,6 +485,7 @@
     data.minigames.minigames.forEach(function (mg) {
       TIERS.forEach(function (tier) {
         eachCount(mg.perHour, tier, function (c) {
+          if (mg.max && c.n > mg.max) return;
           var what = fillTask(mg.task, c.n);
           var twist = mg.twist && TIER_ORDER[tier.id] >= TIER_ORDER[mg.twist.minTier] ? mg.twist : null;
           volumeVariants(tier, c, false).forEach(function (v) {
@@ -489,10 +499,10 @@
             out.push({
               id: ['minigames', mg.name, tier.id, key, c.n].join('|'),
               category: 'minigames', kind: 'mg:' + mg.name, tier: tier.id,
-              title: mg.name + ' × ' + fmtNum(c.n) + (twist ? ' (with a twist)' : ' (' + v.name + ')'),
+              title: mg.name + ': ' + what.charAt(0).toLowerCase() + what.slice(1) + (twist ? ' (with a twist)' : ' (' + v.name + ')'),
               description: what + '.',
               rules: rules, targetMinutes: c.t, tags: mg.team ? ['Needs other players'] : [], stake: null,
-              success: 'You have done it: ' + what.charAt(0).toLowerCase() + what.slice(1) + ', with every rule kept.',
+              success: 'The task as written is complete ("' + what + '"), with every rule kept.',
               failure: fail
             });
           });
@@ -505,7 +515,7 @@
     var q = data.quests;
     // Quests can only be replayed on Quest Speedrunning worlds, so only the
     // quests offered there are used, with the wiki's trophy times.
-    var trophyTiers = { casual: ['bronze', 'silver'], standard: ['bronze', 'silver', 'gold'], hardcore: ['silver', 'gold', 'platinum'], extreme: ['gold', 'platinum'] };
+    var trophyTiers = { casual: ['bronze'], standard: ['silver'], hardcore: ['gold'], extreme: ['platinum'] }; // one trophy per tier, so a higher tier is never the same goal with more tries
     var clock = function (sec) {
       var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), r = sec % 60;
       return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (r < 10 ? '0' : '') + r;
@@ -526,7 +536,7 @@
             description: 'Hop to a Quest Speedrunning world and beat the ' + trophy + ' trophy time of ' + clock(sq[trophy]) + ' on ' + sq.name + ', within ' + runs + '.',
             rules: ['You get ' + runs + '. Starting a run uses one up, even if you reset it.'],
             targetMinutes: t, tags: ['Speedrunning world'], stake: null,
-            success: 'One of your ' + runs + ' finishes ' + sq.name + ' in ' + clock(sq[trophy]) + ' or faster.',
+            success: (cap === 1 ? 'Your one run' : 'One of your ' + runs) + ' finishes ' + sq.name + ' in ' + clock(sq[trophy]) + ' or faster.',
             failure: 'Run number ' + cap + ' ends (or is reset) without beating ' + clock(sq[trophy]) + '.'
           });
         });
@@ -577,7 +587,7 @@
           id: ['quests', 'diary', area, names.join('+')].join('|'), category: 'quests', kind: 'diary', tier: tier.id,
           title: 'Diary victory lap: ' + area + ' ' + names.join(' + '),
           description: 'Open the ' + area + ' achievement diary and perform every task on the ' + names.join(' and ') + ' ' + plural('list', names.length) + ' again (or for the first time), in any order, using the journal as your checklist.',
-          rules: ['One-off tasks that genuinely cannot be repeated count as done.'].concat(safe ? [] : ['No deaths.']),
+          rules: ['The journal will already be ticked, so keep your own tally: work down the list and count each task as you redo it.', 'A task the game will not let you repeat (a one-off unlock) counts as done.'].concat(safe ? [] : ['No deaths.']),
           targetMinutes: mins, tags: wild ? ['Wilderness'] : [], stake: null,
           success: 'Every repeatable task on the ' + names.join(' and ') + ' ' + plural('list', names.length) + ' has been performed since you started.',
           failure: (safe ? 'You stop' : 'You die, or you stop') + ' before the last task is done.'
@@ -725,7 +735,7 @@
   var QUIPS = {
     combat: ['Sit, rat.', 'Bank your loot. Or do not. We are not your mum.', 'Remember: the boss has no idea you are on a challenge.', 'Protect from Missiles, pray for luck.'],
     skilling: ['Number go up.', 'Podcast recommended.', '92 is half of 99, and this is a fraction of that.', 'Your wrists called. They said "stretch".'],
-    minigames: ['It is called a minigame, yet here we are.', 'Blame your team. Everyone does.', 'Points are temporary, bragging is forever.'],
+    minigames: ['It is called a minigame, yet here we are.', 'Fun is mandatory.', 'Points are temporary, bragging is forever.'],
     luck: ['Going dry builds character.', 'RNG owes you nothing, but ask nicely.', 'It is 50/50: you get it or you do not.', 'Spoon incoming. Probably. Maybe.'],
     quests: ['Spacebar is not a personality.', 'One small favour, they said.', 'Swordfish.', 'The lore was inside you all along.']
   };
@@ -794,6 +804,7 @@
       }).slice(0, HISTORY_LIMIT),
       streak: { current: wholeNumber(streak.current), best: wholeNumber(streak.best) },
       daily: daily,
+      timer: s.timer && typeof s.timer === 'object' && typeof s.timer.id === 'string' ? s.timer : null,
       current: typeof s.current === 'string' ? s.current : null,
       currentDaily: s.currentDaily === todayUtc() ? s.currentDaily : null
     };
@@ -900,11 +911,26 @@
       clearInterval(timer.handle);
     }
     timer.running = run;
+    saveTimer();
     renderTimer();
+  }
+  // The stopwatch survives a reload: its state is stored against the challenge it belongs to.
+  function saveTimer() {
+    store.timer = current ? { id: current.id, running: timer.running, startedAt: timer.startedAt, elapsed: timer.elapsed } : null;
+    saveStore();
+  }
+  function restoreTimer() {
+    var t = store.timer;
+    if (!t || !current || t.id !== current.id) return;
+    var elapsed = t.running ? Date.now() - Number(t.startedAt) : Number(t.elapsed);
+    if (!isFinite(elapsed) || elapsed < 0 || elapsed > 24 * 3600 * 1000) return;
+    timer.elapsed = elapsed;
+    if (t.running) setTimerRunning(true); else renderTimer();
   }
   function resetTimer() {
     if (timer.running) clearInterval(timer.handle);
     timer.running = false; timer.elapsed = 0;
+    saveTimer();
     renderTimer();
   }
   function renderTimer() {
@@ -976,7 +1002,10 @@
       $('outcome').textContent = 'You already logged today’s ' + tier.label + ' daily as ' + doneToday + '. A new one arrives at midnight UTC.';
     }
     updateRerollState();
-    if (opts.focus) $('challenge-title').focus();
+    if (opts.focus) {
+      $('challenge-title').focus({ preventScroll: true });
+      try { $('challenge-area').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }); } catch (e) { $('challenge-area').scrollIntoView(); }
+    }
   }
 
   function setActionsEnabled(on) {
@@ -1037,6 +1066,11 @@
     show(rerollKeeping(pool, settings, current, keep), { focus: true, animate: true });
   }
 
+  function validPastDate(text) {
+    var d = new Date(text + 'T00:00:00Z');
+    return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === text && text <= todayUtc() && text >= '2026-01-01';
+  }
+
   /* Links: #c-<code> is one challenge, #daily-<date>-<tier> is a daily. */
   function openFromHash() {
     var hash = root.location.hash || '';
@@ -1049,14 +1083,14 @@
       c = findByCode(pool, one[1]);
       opts.shared = !!c && c.id !== store.current;
       if (c && c.id === store.current) opts.daily = store.currentDaily;
-    } else if (TIER_ORDER.hasOwnProperty(day[2])) {
+    } else if (TIER_ORDER.hasOwnProperty(day[2]) && validPastDate(day[1])) {
       if (day[1] === todayUtc()) { rollDaily(day[2]); return true; }
       c = dailyChallenge(pool, day[2], day[1]);
       opts.shared = true; opts.sharedLabel = 'Daily of ' + day[1];
     }
     if (!c) {
       setHash('');
-      linkNote = 'That shared challenge no longer exists (the challenge data has changed since the link was made). Roll a fresh one instead.';
+      linkNote = day ? 'That daily link is not valid. Roll a fresh challenge instead.' : 'That shared challenge no longer exists (the challenge data has changed since the link was made). Roll a fresh one instead.';
       return false;
     }
     show(c, opts);
@@ -1101,7 +1135,7 @@
     lines.push('Target time: about ' + fmtMinutes(c.targetMinutes) + ' (soft target)');
     lines.push('Success: ' + c.success);
     lines.push('Fail: ' + c.failure);
-    if (c.stake) lines.push('Gp at stake: ' + c.stake);
+    if (c.stake) lines.push('Gp involved: ' + c.stake);
     return lines.join('\n');
   }
   function copyChallenge() {
@@ -1211,11 +1245,14 @@
       $('data-date').textContent = data.meta && data.meta.fetched_date ? data.meta.fetched_date : 'unknown date';
       $('pool-size').textContent = fmtNum(pool.length);
       $('load-status').hidden = true;
+      var keptTimer = store.timer; // showing a challenge resets the stopwatch, so put it back afterwards
       if (!openFromHash()) {
         var saved = store.current ? byId(pool, store.current) : null;
         if (saved) show(saved, { daily: store.currentDaily, note: linkNote });
         else if (linkNote) $('outcome').textContent = linkNote;
       }
+      store.timer = keptTimer;
+      restoreTimer();
       updateGenerateState();
     }).catch(function (err) {
       var status = $('load-status');

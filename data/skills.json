@@ -10,7 +10,7 @@
     {"skill": "Fishing", "activities": [
       {"task": "Catch {n} raw karambwan", "item": "Raw karambwan", "perHour": 500},
       {"task": "Catch {n} raw anglerfish", "item": "Raw anglerfish", "perHour": 180},
-      {"task": "Catch {n} minnows", "item": "Minnow", "perHour": 3000},
+      {"task": "Catch {n} minnows", "item": "Minnow", "perHour": 12000},
       {"task": "Catch {n} infernal eels", "item": "Infernal eel", "perHour": 270},
       {"task": "Catch {n} sacred eels", "item": "Sacred eel", "perHour": 250},
       {"task": "Catch {n} raw monkfish", "item": "Raw monkfish", "perHour": 380},

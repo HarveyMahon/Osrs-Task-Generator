@@ -66,7 +66,8 @@ Beyond tier and category, the player can:
 - **Lock and reroll**: keep the target and change the rules, or keep the rules and change the target.
 - **Roll the daily challenge**: one per tier per UTC day, the same for everyone. It is picked with a random number generator seeded from the date and tier, from a pool that excludes anything needing a Slayer task. It ignores the player's category and opt-out settings so that everyone gets the same one. Because the pick depends on the pool, changing the data files changes that day's daily.
 - **Copy the challenge as text** for pasting into chat.
-- **Copy a link** to the exact challenge. The link ends in `#c-<code>`, where the code is a short hash of the challenge's ID; a daily link ends in `#daily-<date>-<tier>`. Opening a link shows that challenge whatever the visitor's settings are, and results go into the visitor's own stats. Nothing is sent anywhere. A link stops working if the challenge it points to is later changed or removed (for example a kill-speed edit that changes the count); the page then says so and offers a fresh roll.
+- **Use the stopwatch**, which is optional and survives a page reload.
+- **Copy a link** to the exact challenge. The link ends in `#c-<code>`, where the code is a short hash of the challenge's ID; a daily link ends in `#daily-<date>-<tier>` (only real dates from 2026 up to today are accepted). Opening a link shows that challenge whatever the visitor's settings are, and results go into the visitor's own stats. Nothing is sent anywhere. A link stops working if the challenge it points to is later changed or removed (for example a kill-speed edit that changes the count); the page then says so and offers a fresh roll.
 
 Rolling plays a short dice animation (skipped when the device asks for reduced motion), and challenges show an item icon where one makes sense: the drop being hunted, a boss's signature drop, or the item a skilling activity produces or uses. Everything else shows a category symbol.
 
@@ -78,7 +79,7 @@ The pool currently holds about 3,900 distinct challenges. Run the checks with:
 node scripts/check_generator.js
 ```
 
-It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, that share codes are unique and every referenced icon file exists, and it rolls 48,000 challenges the way the UI does.
+It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, that share codes are unique and every referenced icon file exists, that Casual never counts a death or offers endgame content, that clue counts respect the stack cap, and it rolls 48,000 challenges the way the UI does.
 
 Stats (completed, failed and skipped, with a success rate, per tier and per category), the current and best completion streak, the last 50 results, today's daily results and your settings are kept in `localStorage`. Every read and write is wrapped in `try/catch`; if storage is blocked the site still works and simply tells you the stats will not persist.
 
@@ -151,6 +152,11 @@ Kill speeds, skilling rates and time estimates were written from memory for a ne
 - **"Profitable" slayer monsters** (the ones offered above Casual) are a hand-picked list.
 - **Sailing** has five activities, with guessed rates.
 - **Newer bosses** (Royal Titans, Yama, Doom of Mokhaiotl, the Hueycoatl, Moons of Peril) have guessed kill speeds.
+- **Endgame content** (monsters marked `hard`: Theatre of Blood, Tombs of Amascut, Chambers Challenge Mode, the Colosseum, the Inferno, Phosani's Nightmare, Nex, the Corporeal Beast, the Corrupted Gauntlet, Yama, Doom of Mokhaiotl) is never offered at Casual, and no Casual rule counts a death against the player.
+- **Clue scroll challenges** are capped at 5 of a tier, the most a scroll box stack can hold (from memory; the base cap is lower until Combat Achievement rewards raise it).
+- **Two rolls per kill**: Zulrah and the Grotesque Guardians roll their main table twice (per the wiki pages checked on 2026-11-09), and hunt odds account for it via `rolls`.
+- **Minnows** are counted at about 12,000 an hour, worked out from the 40-per-shark exchange rate; not checked against the wiki.
+- **Marathon rule**: Extreme skilling and minigame challenges require staying logged in, with the idle logout as the referee, since a "no long breaks" rule could not be checked.
 - **Attack-style challenges** rely on a hand-written list of which styles work at each boss (`styles` in `data/monsters.json`); the first style listed is the usual one and only the others are offered.
 - **Quest speedruns** use the 15 quests and the trophy times listed on the wiki's [Quest Speedrunning](https://oldschool.runescape.wiki/w/Quest_Speedrunning) page as read on 2026-11-09 (one extra page request, made by hand). They are not refreshed by the script, so they will go stale if Jagex changes the times or adds quests. The attempt caps assume about 2 minutes of setup per run.
 - **Nightmare Zone boss rushes** assume a customisable hard rumble can be limited to the listed bosses.

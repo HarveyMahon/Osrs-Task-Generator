@@ -118,7 +118,7 @@ legend { font-weight: 800; font-size: 1.1rem; padding: 0; margin-bottom: 10px; }
 .slider-row output { color: var(--accent); }
 .slider-row input { width: 100%; accent-color: var(--accent); height: 28px; margin: 0; }
 .tweaks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0 0; }
-.badge-daily { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.badge.badge-daily { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .history { list-style: none; margin: 8px 0 12px; padding: 0; max-height: 320px; overflow-y: auto; }
 .history li { display: grid; grid-template-columns: 6.5em 1fr; gap: 0 10px; padding: 6px 0; border-bottom: 1.5px solid var(--line); }
 .history-result { font-weight: 800; }
@@ -215,6 +215,8 @@ summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 .site-footer { color: var(--muted); font-size: 0.875rem; text-align: center; }
 
 @media (max-width: 480px) {
+  th, td { padding: 6px 3px; font-size: 0.85rem; }
+  thead th { font-size: 0.75rem; }
   body { padding: 0 16px 24px; }
   .card { padding: 16px; border-radius: 14px; }
   .btn-primary { width: 100%; }
