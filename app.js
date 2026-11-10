@@ -54,6 +54,21 @@
     return Math.floor(x / step + 1e-9) * step;
   }
   function plural(label, n) { return n === 1 ? label : label + 's'; }
+  /* "Mine 25 amethyst" -> "mined 25 amethyst", for success text. */
+  var PAST = { 'Successfully pickpocket': 'successfully pickpocketed', 'Power-mine': 'power-mined', 'Mine out': 'mined out', 'Hand in': 'handed in', 'Haul in': 'hauled in',
+    Mine: 'mined', Catch: 'caught', Chop: 'chopped', Craft: 'crafted', Run: 'run', Climb: 'climbed', Deliver: 'delivered', Loot: 'looted', Harvest: 'harvested', Trap: 'trapped',
+    Complete: 'completed', Subdue: 'subdued', Play: 'played', Tag: 'tagged', Crack: 'cracked', Pick: 'picked', Fulfil: 'fulfilled', Cremate: 'cremated', Earn: 'earned', Kill: 'killed' };
+  var PAST_KEYS = Object.keys(PAST).sort(function (a, b) { return b.length - a.length; });
+  function pastTense(what) {
+    for (var i = 0; i < PAST_KEYS.length; i++) {
+      if (what.indexOf(PAST_KEYS[i] + ' ') === 0) return PAST[PAST_KEYS[i]] + what.slice(PAST_KEYS[i].length);
+    }
+    return null;
+  }
+  function doneText(what, tail) {
+    var past = pastTense(what);
+    return past ? 'You have ' + past + ', ' + tail : 'Goal reached (' + what.charAt(0).toLowerCase() + what.slice(1) + '), ' + tail;
+  }
   function fillTask(task, n) {
     return task.replace('{n}', fmtNum(n)).replace('{s}', n === 1 ? '' : 's');
   }
@@ -82,6 +97,10 @@
 
   // ------------------------------------------------------------- templates
   function combatMods(mon, tier, t, gp) {
+    // Wilderness risk: Hardcore carries the cheaper of two benchmark items, Extreme both together,
+    // so the top tier always risks more whatever prices do.
+    var chest = gp.value('Bandos chestplate') || 16e6, torture = gp.value('Amulet of torture') || 15e6;
+    var risk = { low: fmtGp(Math.min(chest, torture)), lowName: chest <= torture ? 'Bandos chestplate' : 'Amulet of torture', high: fmtGp(chest + torture) };
     var tags = mon.tags || [], mods = [];
     var has = function (x) { return tags.indexOf(x) !== -1; };
     var trips;
@@ -95,11 +114,11 @@
     if (mon.wilderness) {
       if (tier.id === 'standard') mods.push({ key: 'alive', name: 'Get out alive', eff: 1, rules: ['No deaths. PKers count.'], fail: 'You die, to the boss or to another player.' });
       if (tier.id === 'hardcore') {
-        mods.push({ key: 'risk', name: 'Risky business', eff: 1, rules: ['Carry at least ' + gp('Bandos chestplate') + ' of unprotected risk the whole time (about one Bandos chestplate).', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + gp('Bandos chestplate') + ' at risk in the Wilderness.' });
+        mods.push({ key: 'risk', name: 'Risky business', eff: 1, rules: ['Carry at least ' + risk.low + ' of unprotected risk the whole time (about one ' + risk.lowName + ').', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + risk.low + ' at risk in the Wilderness.' });
         mods.push({ key: 'nospec', name: 'No specs, no slip-ups', eff: 0.9, rules: ['No special attacks.', 'No deaths. PKers count.'], fail: 'You die, or you use a special attack.' });
       }
       if (tier.id === 'extreme') {
-        mods.push({ key: 'bigrisk', name: 'High roller', eff: 1, rules: ['Carry at least ' + gp('Amulet of torture') + ' of unprotected risk the whole time (about one Amulet of torture).', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + gp('Amulet of torture') + ' at risk in the Wilderness.' });
+        mods.push({ key: 'bigrisk', name: 'High roller', eff: 1, rules: ['Carry at least ' + risk.high + ' of unprotected risk the whole time (about one Bandos chestplate and one Amulet of torture together).', 'No deaths.'], fail: 'You die, or at any point you are carrying less risk than agreed.', stake: 'About ' + risk.high + ' at risk in the Wilderness.' });
         mods.push({ key: 'iron', name: 'Iron will', eff: 0.85, rules: ['No special attacks.', 'No teleporting out to restock more than twice.', 'No deaths. PKers count.'], fail: 'You die, use a special attack, or restock a third time.' });
       }
       return mods;
@@ -337,6 +356,8 @@
           var labels = plural(mon.label, c.n);
           var pct = chance >= 0.1 ? Math.round(chance * 100) : Math.round(chance * 1000) / 10;
           var value = gp(drop.item);
+          var thing = drop.phrase || '"' + drop.item + '"';   // group drops are described, not quoted
+          var short = drop.phrase ? drop.item.replace(/^Any /, '') : drop.item;
           var tags = ['About ' + pct + '% chance'];
           if (mon.wilderness) tags.push('Wilderness');
           if (mon.others) tags.push('Needs other players');
@@ -349,8 +370,8 @@
             out.push({
               id: ['luck', mon.name, drop.item, tier.id, 'grind'].join('|'), subject: mon.name, variant: 'grind',
               category: 'luck', kind: 'grind', tier: tier.id,
-              title: 'Start the ' + drop.item + ' grind',
-              description: 'Put in ' + fmtNum(c.n) + ' ' + labels + ' for "' + drop.item + '" within ' + limit + '. At ' + rateText + ' there is about a ' + pct + '% chance it drops today, and every attempt counts towards the day it does.',
+              title: 'Start the ' + short + ' grind',
+              description: 'Put in ' + fmtNum(c.n) + ' ' + labels + ' for ' + thing + ' within ' + limit + '. At ' + rateText + ' there is about a ' + pct + '% chance it drops today, and every attempt counts towards the day it does.',
               rules: ['Hard limit: ' + limit + ' from your first attempt.'].concat(drop.note ? [drop.note] : []),
               targetMinutes: c.t, tags: tags, iconItems: [drop.item], stake: null,
               success: fmtNum(c.n) + ' new ' + labels + ' are logged within ' + limit + '. The drop itself is a bonus.',
@@ -361,13 +382,13 @@
           out.push({
             id: ['luck', mon.name, drop.item, tier.id].join('|'),
             category: 'luck', kind: 'hunt:' + mon.type, tier: tier.id,
-            title: drop.item + ' hunt',
-            description: 'Get "' + drop.item + '" from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is ' + rateText + ', so your odds are about ' + pct + '%.',
+            title: short + ' hunt',
+            description: 'Get ' + thing + ' from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '. The drop rate is ' + rateText + ', so your odds are about ' + pct + '%.',
             rules: ['Count attempts from zero, starting now.'].concat(isPet(drop.item) ? ['A duplicate-pet message ("you have a funny feeling like you would have been followed") counts.'] : []).concat(drop.note ? [drop.note] : []),
             targetMinutes: c.t, tags: tags, iconItems: [drop.item],
             stake: value ? 'The prize is worth about ' + value + '.' : null,
-            success: '"' + drop.item + '" drops on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
-            failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without "' + drop.item + '".' + (mon.wilderness ? ' Dying does not reset or pause the count.' : '')
+            success: thing.charAt(0).toUpperCase() + thing.slice(1) + ' drops on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
+            failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without ' + thing + '.' + (mon.wilderness ? ' Dying does not reset or pause the count.' : '')
           });
         });
       });
@@ -467,11 +488,11 @@
               out.push({
                 id: ['skilling', sk.skill, act.task, tier.id, v.key, c.n].join('|'),
                 category: 'skilling', kind: 'skill:' + sk.skill, tier: tier.id,
-                title: sk.skill + ': ' + what.charAt(0).toLowerCase() + what.slice(1) + ' (' + v.name + ')',
+                title: what + ' (' + v.name + ')',
                 description: what + '.',
                 rules: v.rules, targetMinutes: c.t, tags: act.wilderness ? ['Wilderness'] : [], stake: stake,
                 iconItems: [act.item, act.consumes],
-                success: 'The task as written is complete ("' + what + '"), counted from when you started.',
+                success: doneText(what, 'counted from when you started.'),
                 failure: v.fail
               });
             });
@@ -499,10 +520,10 @@
             out.push({
               id: ['minigames', mg.name, tier.id, key, c.n].join('|'),
               category: 'minigames', kind: 'mg:' + mg.name, tier: tier.id,
-              title: mg.name + ': ' + what.charAt(0).toLowerCase() + what.slice(1) + (twist ? ' (with a twist)' : ' (' + v.name + ')'),
-              description: what + '.',
+              title: what + (twist ? ' (with a twist)' : ' (' + v.name + ')'),
+              description: what + '.' + (mg.detail ? ' ' + mg.detail : ''),
               rules: rules, targetMinutes: c.t, tags: mg.team ? ['Needs other players'] : [], stake: null,
-              success: 'The task as written is complete ("' + what + '"), with every rule kept.',
+              success: doneText(what, 'with every rule kept.'),
               failure: fail
             });
           });
@@ -607,7 +628,9 @@
     var valueOf = function (name) { return values[name] == null ? null : values[name]; };
     var gp = function (name) { return fmtGp(valueOf(name)); };
     var out = [];
-    buildCombat(data, function (n) { return gp(n) || 'a few hundred k gp'; }, out);
+    var combatGp = function (n) { return gp(n) || 'a few hundred k gp'; };
+    combatGp.value = valueOf;
+    buildCombat(data, combatGp, out);
     buildSkilling(data, gp, valueOf, out);
     buildMinigames(data, out);
     buildLuck(data, gp, function (n) { return !!pets[n]; }, out);
@@ -878,6 +901,7 @@
     var settings = readSettings();
     var count = pool.length ? filterPool(pool, settings).length : 0;
     $('generate').disabled = count === 0 || rolling;
+    $('reroll-any').disabled = count === 0 || rolling;
     var note = $('pool-note');
     if (!pool.length) note.textContent = '';
     else if (!settings.categories.length) note.textContent = 'Tick at least one category to roll a challenge.';
@@ -1002,8 +1026,8 @@
       $('outcome').textContent = 'You already logged today’s ' + tier.label + ' daily as ' + doneToday + '. A new one arrives at midnight UTC.';
     }
     updateRerollState();
-    if (opts.focus) {
-      $('challenge-title').focus({ preventScroll: true });
+    if (opts.focus) $('challenge-title').focus({ preventScroll: true });
+    if (opts.focus || opts.scroll) {
       try { $('challenge-area').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }); } catch (e) { $('challenge-area').scrollIntoView(); }
     }
   }
@@ -1073,16 +1097,23 @@
 
   /* Links: #c-<code> is one challenge, #daily-<date>-<tier> is a daily. */
   function openFromHash() {
-    var hash = root.location.hash || '';
+    var hash = (root.location.hash || '').toLowerCase();
     linkNote = '';
     var one = /^#c-([a-z0-9]+)$/.exec(hash);
     var day = /^#daily-(\d{4}-\d{2}-\d{2})-([a-z]+)$/.exec(hash);
-    if (!one && !day) return false;
-    var c = null, opts = { focus: false };
+    if (!one && !day) {
+      // Something that was clearly meant to be a link but is malformed should say so.
+      if (/^#(daily|c)\b/.test(hash)) {
+        setHash('');
+        linkNote = /^#daily/.test(hash) ? 'That daily link is not valid. Roll a fresh challenge instead.' : 'That challenge link is not valid. Roll a fresh one instead.';
+      }
+      return false;
+    }
+    var c = null, opts = { focus: false, scroll: true };
     if (one) {
       c = findByCode(pool, one[1]);
       opts.shared = !!c && c.id !== store.current;
-      if (c && c.id === store.current) opts.daily = store.currentDaily;
+      if (c && c.id === store.current) { opts.daily = store.currentDaily; opts.scroll = false; }
     } else if (TIER_ORDER.hasOwnProperty(day[2]) && validPastDate(day[1])) {
       if (day[1] === todayUtc()) { rollDaily(day[2]); return true; }
       c = dailyChallenge(pool, day[2], day[1]);
@@ -1225,6 +1256,7 @@
     renderStats();
     renderTimer();
     $('generate').addEventListener('click', function () { roll(); });
+    $('reroll-any').addEventListener('click', function () { roll(); });
     $('daily').addEventListener('click', function () { rollDaily(); });
     $('reroll-subject').addEventListener('click', function () { reroll('subject'); });
     $('reroll-variant').addEventListener('click', function () { reroll('variant'); });

@@ -67,19 +67,19 @@ Beyond tier and category, the player can:
 - **Roll the daily challenge**: one per tier per UTC day, the same for everyone. It is picked with a random number generator seeded from the date and tier, from a pool that excludes anything needing a Slayer task. It ignores the player's category and opt-out settings so that everyone gets the same one. Because the pick depends on the pool, changing the data files changes that day's daily.
 - **Copy the challenge as text** for pasting into chat.
 - **Use the stopwatch**, which is optional and survives a page reload.
-- **Copy a link** to the exact challenge. The link ends in `#c-<code>`, where the code is a short hash of the challenge's ID; a daily link ends in `#daily-<date>-<tier>` (only real dates from 2026 up to today are accepted). Opening a link shows that challenge whatever the visitor's settings are, and results go into the visitor's own stats. Nothing is sent anywhere. A link stops working if the challenge it points to is later changed or removed (for example a kill-speed edit that changes the count); the page then says so and offers a fresh roll.
+- **Copy a link** to the exact challenge. The link ends in `#c-<code>`, where the code is a short hash of the challenge's ID; a daily link ends in `#daily-<date>-<tier>` (only real dates from 2026 up to today are accepted). Opening a link shows that challenge whatever the visitor's settings are, and results go into the visitor's own stats. Nothing is sent anywhere. A link stops working if the challenge it points to is later changed or removed (for example a kill-speed edit that changes the count); the page then says so and offers a fresh roll. Opening a link scrolls to the challenge card. A link that is clearly meant to be one but is malformed (a one-digit day, a missing code) gets a "not valid" message; links are not case-sensitive.
 
 Rolling plays a short dice animation (skipped when the device asks for reduced motion), and challenges show an item icon where one makes sense: the drop being hunted, a boss's signature drop, or the item a skilling activity produces or uses. Everything else shows a category symbol.
 
 Rolling picks a category first, then a "kind" inside it (for example one boss), then a challenge, so large groups do not drown small ones. The last 12 challenges shown are avoided, and the same challenge is never shown twice in a row.
 
-The pool currently holds about 3,900 distinct challenges. Run the checks with:
+The pool currently holds about 3,600 distinct challenges. Run the checks with:
 
 ```bash
 node scripts/check_generator.js
 ```
 
-It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, that share codes are unique and every referenced icon file exists, that Casual never counts a death or offers endgame content, that clue counts respect the stack cap, and it rolls 48,000 challenges the way the UI does.
+It verifies that no tier and category combination is empty, that every challenge has a title, success and failure text, that every time target sits inside its tier window, that Casual challenges carry no death risk, that every luck challenge has an attempt cap, that the opt-outs and time limit are respected and never empty a tier, that lock-and-reroll keeps what it promises, that the daily challenge is stable and never needs a Slayer task, that titles do not repeat themselves, that no text says "1 runs", that every success line reads as a sentence, that Extreme Wilderness risk exceeds Hardcore, that share codes are unique and every referenced icon file exists, that Casual never counts a death or offers endgame content, that clue counts respect the stack cap, and it rolls 48,000 challenges the way the UI does.
 
 Stats (completed, failed and skipped, with a success rate, per tier and per category), the current and best completion streak, the last 50 results, today's daily results and your settings are kept in `localStorage`. Every read and write is wrapped in `try/catch`; if storage is blocked the site still works and simply tells you the stats will not persist.
 
@@ -142,7 +142,9 @@ Things I could not verify from those pages:
 
 Kill speeds, skilling rates and time estimates were written from memory for a near-maxed account and are deliberately on the slow side so that targets are reachable. Treat them as approximate.
 
-- **Kills per hour, skilling rates and minigame lengths** are rough estimates.
+- **Kills per hour, skilling rates and minigame lengths** are rough estimates. Kill speeds for the Casual-only slayer monsters (cave horrors, hill giants, moss giants, aberrant spectres) and kurask were lowered by about a quarter after review, to off-task single-target pace.
+- **Wilderness risk rules** are priced from two bundled items: Hardcore carries the cheaper of a Bandos chestplate and an Amulet of torture, Extreme carries both together, so Extreme always risks more whatever prices do.
+- **Late-game bosses** (`hard` in `data/monsters.json`, now including the four Desert Treasure II bosses) are never offered at Casual.
 - **Drop rates** were checked on 2026-11-09 against the drop tables on the wiki's monster pages (three batched page requests, made by hand). Six were wrong and were corrected: the three Wilderness boss rings (1/512), Monkey tail (1/1,500), Crystal tool seed (about 1/205) and the Noxious halberd pieces (1/200 for whichever piece is next). The remaining figures (the Gauntlet and Corrupted Gauntlet seeds and Youngllef, Bran, Blood shard, and the "any item" Barrows figure of about 1/15 per chest) were confirmed against wiki screenshots supplied by the repository owner on the same day. The Bran rate assumes loot is not sacrificed (sacrificing doubles it to 1/1,500). Rates are not re-checked by the refresh script.
 - **Tradeability**: an item is marked `tradeable: false` when the price feed had no entry for it on 2026-11-09. That is right for pets and for parts such as Noxious halberd pieces, but an item that is tradeable and simply missing from the feed would be mislabelled (Ancient icon is the one to check).
 - **XP targets** use a comfortable XP rate per skill written from memory, well below the best possible rate. A player already at 200m XP in a skill cannot do that skill's challenges.

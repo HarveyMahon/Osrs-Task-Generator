@@ -53,6 +53,22 @@ for (const mg of data.minigames.minigames) {
   for (const c of pool) if (c.kind === 'mg:' + mg.name && Number((/\b(\d+)\b/.exec(c.description) || [])[1]) > mg.max) problems.push(`${c.id}: exceeds the stack cap of ${mg.max}`);
 }
 
+// 2b. Wording regressions: names said twice in a title, "1 <plural>", unconjugated success text,
+//     and Extreme never risking less than Hardcore in the Wilderness.
+const PLURALS = 'runs|games|kills|times|trips|laps|stars|scrolls|contracts|orders|swords|chests|raids|completions|tasks|attempts|pillars|treks|levels';
+const onePlural = new RegExp('(^|[^\\d,.])1 (?:[\\w\'+-]+ ){0,4}?(?:' + PLURALS + ')\\b');
+for (const c of pool) {
+  const m = /^([^:]{4,}): (.*)$/.exec(c.title);
+  if (m && m[2].toLowerCase().includes(m[1].toLowerCase())) problems.push(`${c.id}: title repeats itself: ${c.title}`);
+  if (c.title.length > 95) problems.push(`${c.id}: title too long (${c.title.length}): ${c.title}`);
+  for (const f of ['title', 'description', 'success', 'failure']) if (onePlural.test(c[f])) problems.push(`${c.id}: "1 <plural>" in ${f}: ${c[f]}`);
+  if (/^Goal reached|as written/.test(c.success)) problems.push(`${c.id}: success text has no past-tense form: ${c.success}`);
+  if (/"Any /.test(c.description + c.success + c.failure)) problems.push(`${c.id}: quotes a group drop as if it were an item`);
+}
+const riskOf = (tier, key) => { const c = pool.find((x) => x.tier === tier && x.variant === key); const m = c && /([\d.]+)m gp/.exec(c.stake || ''); return m ? Number(m[1]) : null; };
+const hcRisk = riskOf('hardcore', 'risk'), exRisk = riskOf('extreme', 'bigrisk');
+if (hcRisk == null || exRisk == null || !(exRisk > hcRisk)) problems.push(`Extreme Wilderness risk (${exRisk}m) must exceed Hardcore (${hcRisk}m)`);
+
 // 3. Pool sizes per tier x category, and distinct challenges overall.
 console.log(`Pool: ${pool.length} distinct challenges`);
 const header = ['tier'.padEnd(10)].concat(gen.CATEGORIES.map((c) => c.id.padStart(10))).join('');
