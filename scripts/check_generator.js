@@ -36,7 +36,8 @@ for (const c of pool) {
   if (!(c.targetMinutes >= t.min && c.targetMinutes <= t.max)) problems.push(`${c.id}: target ${c.targetMinutes} outside ${c.tier} window`);
   if (c.targetMinutes > gen.MAX_MINUTES) problems.push(`${c.id}: exceeds 3 hours`);
   if (c.tier === 'casual' && (c.tags.includes('Wilderness') || /\bdie\b|death ends/i.test(c.failure))) problems.push(`${c.id}: casual challenge with death risk`);
-  if (c.category === 'luck' && !/within [\d,]+ /.test(c.description)) problems.push(`${c.id}: luck challenge without an attempt cap`);
+  if (c.category === 'luck' && c.kind !== 'grind' && !/within [\d,]+ /.test(c.description)) problems.push(`${c.id}: luck challenge without an attempt cap`);
+  if (c.kind === 'grind' && !/Hard limit/.test(c.rules.join(' '))) problems.push(`${c.id}: grind without a time limit`);
 }
 
 // 3. Pool sizes per tier x category, and distinct challenges overall.

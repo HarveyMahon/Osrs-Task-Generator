@@ -41,10 +41,21 @@ To host it, enable GitHub Pages for the repository (deploy from the default bran
 
 `app.js` builds the full pool once, when the page loads, by filling templates with the data files:
 
-- **Combat**: "N kills" of a boss, raid or slayer monster, with a tier-dependent rule set (trip limits, no deaths, no special attacks, gear value caps, Wilderness risk, or a single attack style where the boss supports more than one), hand-written multi-boss "boss tours", and "N slayer tasks from a master".
-- **Skilling** and **Minigames**: "do N of something" (Farming uses fixed patch runs instead, since growth timers rule out bulk counts), from a relaxed version at Casual to a hard time limit at Hardcore and Extreme. Some minigames add a twist (win every game, no food, and so on).
-- **Pets and rare drops**: "get drop X within N attempts". N is what fits in the tier's time, and a drop is only offered in a tier if the chance of success lands in that tier's band (Casual 25% or better, Standard 15 to 55%, Hardcore 5 to 20%, Extreme 0.8 to 7%).
-- **Quests and diaries**: trophy times on Quest Speedrunning worlds, Nightmare Zone quest boss rematches, and "victory laps" of achievement diary task lists. Ordinary quests are not used, because a quest can only be replayed on a speedrunning world.
+- **Combat**:
+  - "N kills" of a boss, raid or slayer monster, with a tier-dependent rule set (trip limits, no deaths, no special attacks, gear value caps, Wilderness risk, or a single attack style where the boss supports more than one). Slayer monsters that are not worth killing are Casual-only.
+  - "Beat your best": set a new in-game personal best within N kills.
+  - "Loot race": collect a gp value of drops, read off a loot tracker, inside a time limit.
+  - Single-weapon runs with an off-meta weapon, and "one-trip wonder" endurance runs (N kills from one inventory, as many attempts as the clock allows).
+  - Hand-written multi-boss "boss tours" and Wilderness errands.
+  - "N slayer tasks from a master" (the low-level masters are Casual-only).
+- **Skilling** and **Minigames**: "do N of something", from a relaxed version at Casual to a hard time limit at Hardcore and Extreme. Production skills (Cooking, Firemaking, Fletching, Herblore, Crafting, Smithing, Magic, Construction) are "gain N XP by any method" instead, so the player picks the method. Farming uses fixed patch runs, since growth timers rule out bulk counts. There are no Prayer challenges. Some minigames add a twist (win every game, no food, and so on).
+- **Pets and rare drops**:
+  - "Get drop X within N attempts". N is what fits in the tier's time, and a drop is only offered in a tier if the chance of success lands in that tier's band (Casual 25% or better, Standard 15 to 55%, Hardcore 5 to 20%, Extreme 0.8 to 7%).
+  - Where the chance is under 5% (pets, mostly), the challenge becomes a "grind starter": put in the N attempts inside a time limit, with the drop as a bonus.
+  - "New log slot": fill any new collection log slot from a boss within N attempts.
+- **Quests and diaries**: trophy times on Quest Speedrunning worlds, Nightmare Zone quest boss rematches, and "victory laps" of the Easy and Medium achievement diary lists (Casual and Standard only). Ordinary quests are not used, because a quest can only be replayed on a speedrunning world.
+
+Personal-best and log-slot challenges depend on the player's own account, so a player who already holds a hard-to-beat record or a full log will skip them.
 
 Counts are always rounded down to a friendly number and the time target is derived from the count, so a challenge can never exceed its tier's window or three hours. Tier windows are 15 to 45 minutes, 45 to 90 minutes, 1.5 to 2.25 hours and 2.25 to 3 hours.
 
@@ -61,7 +72,7 @@ Rolling plays a short dice animation (skipped when the device asks for reduced m
 
 Rolling picks a category first, then a "kind" inside it (for example one boss), then a challenge, so large groups do not drown small ones. The last 12 challenges shown are avoided, and the same challenge is never shown twice in a row.
 
-The pool currently holds about 3,600 distinct challenges. Run the checks with:
+The pool currently holds about 3,900 distinct challenges. Run the checks with:
 
 ```bash
 node scripts/check_generator.js
@@ -133,6 +144,11 @@ Kill speeds, skilling rates and time estimates were written from memory for a ne
 - **Kills per hour, skilling rates and minigame lengths** are rough estimates.
 - **Drop rates** were checked on 2026-11-09 against the drop tables on the wiki's monster pages (three batched page requests, made by hand). Six were wrong and were corrected: the three Wilderness boss rings (1/512), Monkey tail (1/1,500), Crystal tool seed (about 1/205) and the Noxious halberd pieces (1/200 for whichever piece is next). The remaining figures (the Gauntlet and Corrupted Gauntlet seeds and Youngllef, Bran, Blood shard, and the "any item" Barrows figure of about 1/15 per chest) were confirmed against wiki screenshots supplied by the repository owner on the same day. The Bran rate assumes loot is not sacrificed (sacrificing doubles it to 1/1,500). Rates are not re-checked by the refresh script.
 - **Tradeability**: an item is marked `tradeable: false` when the price feed had no entry for it on 2026-11-09. That is right for pets and for parts such as Noxious halberd pieces, but an item that is tradeable and simply missing from the feed would be mislabelled (Ancient icon is the one to check).
+- **XP targets** use a comfortable XP rate per skill written from memory, well below the best possible rate. A player already at 200m XP in a skill cannot do that skill's challenges.
+- **Loot races** use a hand-written estimate of ordinary loot per hour for each boss (`lootPerHour`, rare uniques excluded), and the target is 80% of that. They are not derived from the bundled prices and will drift as prices move.
+- **Single-weapon runs** (`weapons`) and **one-trip runs** (`tripKills`) rely on hand-written lists of what is workable at each boss.
+- **Personal bests**: bosses marked `noPb` are left out because I believe the game keeps no timer for them; the list was written from memory.
+- **"Profitable" slayer monsters** (the ones offered above Casual) are a hand-picked list.
 - **Sailing** has five activities, with guessed rates.
 - **Newer bosses** (Royal Titans, Yama, Doom of Mokhaiotl, the Hueycoatl, Moons of Peril) have guessed kill speeds.
 - **Attack-style challenges** rely on a hand-written list of which styles work at each boss (`styles` in `data/monsters.json`); the first style listed is the usual one and only the others are offered.

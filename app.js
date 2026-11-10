@@ -144,6 +144,7 @@
       TIERS.forEach(function (tier) {
         if (mon.wilderness && tier.id === 'casual') return;
         if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
+        if (mon.type === 'slayer' && !mon.profitable && tier.id !== 'casual') return;
         // Mods are chosen from the slot length, then the count is scaled by the mod's efficiency.
         tier.durations.forEach(function (d) {
           combatMods(mon, tier, d, gp).concat(styleMods(mon, tier)).forEach(function (mod) {
@@ -173,6 +174,105 @@
       });
     });
 
+    // Personal bests, loot races, single-weapon runs and one-trip endurance.
+    data.monsters.monsters.forEach(function (mon) {
+      if (mon.type === 'other') return;
+      var tags = [];
+      if (mon.wilderness) tags.push('Wilderness');
+      if (mon.team) tags.push('Team content');
+      if (mon.taskOnly) tags.push('Needs a Slayer task');
+      if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
+      var icons = mon.drops.map(function (dr) { return dr.item; });
+      var pk = mon.wilderness ? ' PKers count.' : '';
+      TIERS.forEach(function (tier) {
+        if (mon.wilderness && tier.id === 'casual') return;
+        if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
+        var safe = tier.id === 'casual';
+        var mid = tier.durations[1];
+        var c;
+
+        if (mon.type !== 'slayer' && !mon.noPb && (c = makeCount(mon.perHour, mid, tier))) {
+          var attempts = fmtNum(c.n) + ' ' + plural(mon.label, c.n);
+          out.push({
+            id: ['combat', 'pb', mon.name, tier.id].join('|'), subject: mon.name, variant: 'pb',
+            category: 'combat', kind: 'pb', tier: tier.id,
+            title: 'Beat your best: ' + mon.name,
+            description: 'Set a new personal best time at ' + mon.name + ' within ' + attempts + '.',
+            rules: ['Note your current in-game personal best before you start.'].concat(safe ? ['Deaths only cost you an attempt.'] : ['No deaths.' + pk]),
+            targetMinutes: c.t, tags: tags.concat(['Depends on your record']), stake: null, iconItems: icons,
+            success: 'The game announces a new personal best on or before attempt ' + fmtNum(c.n) + '.',
+            failure: 'You finish ' + attempts + ' without a new personal best' + (safe ? '.' : ', or you die.')
+          });
+        }
+
+        if (mon.lootPerHour) {
+          tier.durations.forEach(function (d) {
+            var raw = mon.lootPerHour * d / 60 * 0.8;
+            var step = raw >= 1e6 ? 1e5 : 5e4;
+            var target = Math.floor(raw / step) * step;
+            if (target < step) return;
+            var limit = fmtMinutes(Math.min(MAX_MINUTES, round5(d * 1.2)));
+            out.push({
+              id: ['combat', 'loot', mon.name, tier.id, d].join('|'), subject: mon.name, variant: 'loot',
+              category: 'combat', kind: 'loot', tier: tier.id,
+              title: 'Loot race: ' + fmtGp(target) + ' from ' + mon.name,
+              description: 'Collect at least ' + fmtGp(target) + ' of drops from ' + mon.name + '.',
+              rules: ['Count the value on a loot tracker, at Grand Exchange prices.', 'Rare drops count. Lucky you.', 'Hard limit: ' + limit + ' from your first kill.'].concat(safe ? [] : ['No deaths.' + pk]),
+              targetMinutes: d, tags: tags, stake: 'About ' + fmtGp(target) + ' of loot to collect.', iconItems: icons,
+              success: 'Your loot tracker shows ' + fmtGp(target) + ' or more from ' + mon.name + ' within ' + limit + '.',
+              failure: 'The tracker is still under ' + fmtGp(target) + ' when ' + limit + ' has passed' + (safe ? '.' : ', or you die.')
+            });
+          });
+        }
+
+        if (mon.weapons && tier.id !== 'extreme' && (c = makeCount(mon.perHour * 0.6, mid, tier))) {
+          mon.weapons.forEach(function (weapon) {
+            var labels = plural(mon.label, c.n);
+            out.push({
+              id: ['combat', 'weapon', mon.name, tier.id, weapon].join('|'), subject: mon.name, variant: 'weapon',
+              category: 'combat', kind: 'weapon', tier: tier.id,
+              title: fmtNum(c.n) + ' ' + labels + ': ' + weapon + ' only',
+              description: 'Rack up ' + fmtNum(c.n) + ' ' + labels + ' using nothing but the ' + weapon + '.',
+              rules: ['Every hit must come from the ' + weapon + ': no other weapons, spells, thralls or cannon.', 'Its special attack is fine, if it has one.'].concat(safe ? ['Deaths only cost you time.'] : ['No deaths.' + pk]),
+              targetMinutes: c.t, tags: tags, stake: null, iconItems: [weapon],
+              success: fmtNum(c.n) + ' new ' + labels + ' are logged, every one with the ' + weapon + ' alone.',
+              failure: (safe ? 'You' : 'You die, or you') + ' damage the target with anything other than the ' + weapon + '.'
+            });
+          });
+        }
+
+        if (mon.tripKills) {
+          var need = Math.ceil(mon.tripKills * { casual: 1, standard: 1.25, hardcore: 1.5, extreme: 2 }[tier.id]);
+          var kills = fmtNum(need) + ' ' + plural(mon.label, need);
+          out.push({
+            id: ['combat', 'trip', mon.name, tier.id].join('|'), subject: mon.name, variant: 'trip',
+            category: 'combat', kind: 'trip', tier: tier.id,
+            title: 'One-trip wonder: ' + kills,
+            description: 'Get ' + kills + ' in a single trip: one inventory, no banking, no leaving. Try as many times as the clock allows.',
+            rules: ['Hard limit: ' + fmtMinutes(mid) + ' from the start of your first trip.', 'Leaving, banking or being knocked out ends that trip, not the challenge.'],
+            targetMinutes: mid, tags: tags, stake: null, iconItems: icons,
+            success: 'One unbroken trip reaches ' + kills + ' within ' + fmtMinutes(mid) + '.',
+            failure: fmtMinutes(mid) + ' passes without a single trip of ' + kills + '.'
+          });
+        }
+      });
+    });
+
+    (data.monsters.errands || []).forEach(function (er) {
+      var tier = tierForMinutes(er.minutes);
+      if (!tier || tier.id === 'casual') return;
+      out.push({
+        id: ['combat', 'errand', er.title].join('|'), subject: er.title, variant: 'errand',
+        category: 'combat', kind: 'errand', tier: tier.id,
+        title: 'Wilderness errand: ' + er.title,
+        description: er.task + '.',
+        rules: ['No deaths. PKers count.', 'Bring whatever you like, and accept that you might lose it.'],
+        targetMinutes: er.minutes, tags: ['Wilderness'], stake: 'Whatever you carry is at risk in the Wilderness.',
+        success: 'Everything in the task is done and you are standing in a bank, alive.',
+        failure: 'You die, break a condition in the task, or stop before it is done.'
+      });
+    });
+
     (data.monsters.feats || []).forEach(function (feat) {
       var tier = tierForMinutes(feat.minutes);
       if (!tier) return;
@@ -194,6 +294,7 @@
     data.monsters.slayerMasters.forEach(function (sm) {
       TIERS.forEach(function (tier) {
         if (sm.wilderness && tier.id === 'casual') return;
+        if (sm.casualOnly && tier.id !== 'casual') return;
         var v = {
           casual: { rules: ['Skipping is allowed, but a skipped task does not count.'], fail: STOP_FAIL },
           standard: { rules: ['Take what you are given: no skipping or cancelling.', 'No deaths.'], fail: 'You skip or cancel a task, or you die.' },
@@ -222,6 +323,7 @@
         TIERS.forEach(function (tier) {
           if (mon.wilderness && tier.id === 'casual') return;
           if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
+          if (mon.type === 'slayer' && !mon.profitable && tier.id !== 'casual') return;
           var c = makeCount(mon.perHour, tier.luckMinutes, tier);
           if (!c) return;
           var chance = 1 - Math.pow(1 - 1 / drop.rate, c.n);
@@ -233,6 +335,22 @@
           if (mon.wilderness) tags.push('Wilderness');
           if (mon.taskOnly) tags.push('Needs a Slayer task');
           if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
+          if (chance < 0.05) {
+            // A long shot: the grind itself is the challenge and the drop is a bonus.
+            var limit = fmtMinutes(Math.min(MAX_MINUTES, round5(c.t * 1.15)));
+            tags[0] = 'About ' + pct + '% bonus chance';
+            out.push({
+              id: ['luck', mon.name, drop.item, tier.id, 'grind'].join('|'), subject: mon.name, variant: 'grind',
+              category: 'luck', kind: 'grind', tier: tier.id,
+              title: 'Start the ' + drop.item + ' grind',
+              description: 'Put in ' + fmtNum(c.n) + ' ' + labels + ' for "' + drop.item + '" within ' + limit + '. At roughly 1/' + fmtNum(drop.rate) + ' there is about a ' + pct + '% chance it drops today, and every attempt counts towards the day it does.',
+              rules: ['Hard limit: ' + limit + ' from your first attempt.'].concat(drop.note ? [drop.note] : []),
+              targetMinutes: c.t, tags: tags, iconItems: [drop.item], stake: null,
+              success: fmtNum(c.n) + ' new ' + labels + ' are logged within ' + limit + '. The drop itself is a bonus.',
+              failure: 'Fewer than ' + fmtNum(c.n) + ' ' + labels + ' are logged when ' + limit + ' has passed.'
+            });
+            return;
+          }
           out.push({
             id: ['luck', mon.name, drop.item, tier.id].join('|'),
             category: 'luck', kind: 'hunt:' + mon.type, tier: tier.id,
@@ -244,6 +362,33 @@
             success: '"' + drop.item + '" drops on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
             failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without "' + drop.item + '".' + (mon.wilderness ? ' Dying does not reset or pause the count.' : '')
           });
+        });
+      });
+    });
+  }
+
+  function buildLogSlots(data, out) {
+    data.monsters.monsters.forEach(function (mon) {
+      if (mon.team || (mon.type !== 'boss' && mon.type !== 'raid') || /\(/.test(mon.name)) return;
+      TIERS.forEach(function (tier) {
+        if (mon.wilderness && tier.id === 'casual') return;
+        if (mon.taskOnly && TIER_ORDER[tier.id] > 1) return;
+        var c = makeCount(mon.perHour, tier.luckMinutes, tier);
+        if (!c) return;
+        var labels = plural(mon.label, c.n);
+        var tags = ['Depends on your log'];
+        if (mon.wilderness) tags.push('Wilderness');
+        if (mon.taskOnly) tags.push('Needs a Slayer task');
+        if (mon.flag) tags.push(FLAG_TAGS[mon.flag]);
+        out.push({
+          id: ['luck', mon.name, 'log slot', tier.id].join('|'), subject: mon.name, variant: 'log',
+          category: 'luck', kind: 'log', tier: tier.id,
+          title: 'New log slot: ' + mon.name,
+          description: 'Fill any new collection log slot from ' + mon.name + ' within ' + fmtNum(c.n) + ' ' + labels + '.',
+          rules: ['Count attempts from zero, starting now.', 'Any slot on that page counts, however humble.'],
+          targetMinutes: c.t, tags: tags, stake: null, iconItems: mon.drops.map(function (dr) { return dr.item; }),
+          success: 'A "New item added to your collection log" message for ' + mon.name + ' appears on or before ' + mon.label + ' number ' + fmtNum(c.n) + '.',
+          failure: 'You reach ' + fmtNum(c.n) + ' ' + labels + ' without a new slot.'
         });
       });
     });
@@ -279,6 +424,26 @@
           failure: tier.id === 'casual' ? 'You call it a day before the last patch on the route.' : 'You wander off to do something else, or stop before the last patch on the route.'
         });
       });
+      if (sk.xp) {
+        TIERS.forEach(function (tier) {
+          tier.durations.forEach(function (d) {
+            var n = Math.floor(sk.xp.perHour * d / 60 / 5000) * 5000;
+            if (n < 5000) return;
+            volumeVariants(tier, { n: n, t: d }, false).forEach(function (v) {
+              out.push({
+                id: ['skilling', sk.skill, 'xp', tier.id, v.key, n].join('|'), subject: sk.skill, variant: v.key,
+                category: 'skilling', kind: 'skill:' + sk.skill, tier: tier.id,
+                title: sk.skill + ': gain ' + fmtNum(n) + ' XP (' + v.name + ')',
+                description: 'Gain ' + fmtNum(n) + ' ' + sk.skill + ' XP, by any method you like.',
+                rules: v.rules.concat(['Use an XP tracker, or note your XP before you start.']),
+                targetMinutes: d, tags: [], stake: null, iconItems: [sk.xp.item],
+                success: 'Your ' + sk.skill + ' XP has gone up by at least ' + fmtNum(n) + ' since you started.',
+                failure: v.fail.replace('The count is not reached', 'The XP is not gained').replace('before the count is reached', 'before the XP is gained')
+              });
+            });
+          });
+        });
+      }
       (sk.activities || []).forEach(function (act) {
         TIERS.forEach(function (tier) {
           if (act.wilderness && tier.id === 'casual') return;
@@ -399,7 +564,7 @@
     rush(20, 5, 'extreme', 150, ['No dream potions.', 'No power-ups.']);
 
     var d = q.diaries;
-    var combos = [[0], [1], [2], [3], [0, 1], [1, 2], [0, 1, 2]];
+    var combos = [[0], [1], [0, 1]]; // Easy and Medium only: the harder lists are a slog to repeat
     d.areas.forEach(function (area) {
       var wild = area === 'Wilderness';
       combos.forEach(function (combo) {
@@ -436,6 +601,7 @@
     buildSkilling(data, gp, valueOf, out);
     buildMinigames(data, out);
     buildLuck(data, gp, function (n) { return !!pets[n]; }, out);
+    buildLogSlots(data, out);
     buildQuests(data, out);
     return out.map(function (c) {
       var names = (c.iconItems || []).filter(function (n) { return icons[n]; });
@@ -465,6 +631,8 @@
   function annotate(c) {
     var p = c.id.split('|');
     c.code = shortCode(c.id);
+    c.flags = c.tags.map(function (t) { return TAG_FLAGS[t]; }).filter(Boolean);
+    if (c.subject && c.variant) return c;
     c.flags = c.tags.map(function (t) { return TAG_FLAGS[t]; }).filter(Boolean);
     if (p[0] === 'combat' && p[1] === 'count') { c.subject = p[2]; c.variant = p[4]; }
     else if (p[0] === 'combat') { c.subject = p[2]; c.variant = p[1]; }

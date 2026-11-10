@@ -1,5 +1,5 @@
 {
-  "_note": "Hand-curated. perHour = rough units per hour for a near-maxed player using a normal (non tick-perfect) method, rounded down. In task strings {n} is the count and {s} a plural 's'. fixed = one-off tasks with a time estimate instead of a rate (Farming, where growth timers rule out bulk counts). item = item whose icon represents the activity. consumes = tradeable item used up once per unit (used for the gp-at-stake line).",
+  "_note": "Hand-curated. perHour = rough units per hour for a near-maxed player using a normal (non tick-perfect) method, rounded down. In task strings {n} is the count and {s} a plural 's'. xp = production skills are XP targets by any method; perHour is a comfortable XP rate, not the best one. fixed = one-off tasks with a time estimate instead of a rate (Farming, where growth timers rule out bulk counts). item = item whose icon represents the activity. consumes = tradeable item used up once per unit (used for the gp-at-stake line).",
   "skills": [
     {"skill": "Mining", "activities": [
       {"task": "Mine {n} amethyst", "item": "Amethyst", "perHour": 85},
@@ -66,50 +66,14 @@
       {"task": "Catch {n} red salamanders", "perHour": 250},
       {"task": "Complete {n} Hunter rumour{s}", "perHour": 9}
     ]},
-    {"skill": "Cooking", "activities": [
-      {"task": "Cook {n} karambwan", "item": "Cooked karambwan", "perHour": 1300},
-      {"task": "Cook {n} sharks", "item": "Shark", "perHour": 1300},
-      {"task": "Cook {n} anglerfish", "item": "Anglerfish", "perHour": 1300}
-    ]},
-    {"skill": "Firemaking", "activities": [
-      {"task": "Burn {n} magic logs, one at a time", "perHour": 1300, "consumes": "Magic logs"},
-      {"task": "Burn {n} redwood logs, one at a time", "perHour": 1300, "consumes": "Redwood logs"}
-    ]},
-    {"skill": "Fletching", "activities": [
-      {"task": "Cut {n} magic longbows (u)", "item": "Magic longbow (u)", "perHour": 1600, "consumes": "Magic logs"},
-      {"task": "String {n} magic longbows", "item": "Magic longbow", "perHour": 2300}
-    ]},
-    {"skill": "Herblore", "activities": [
-      {"task": "Mix {n} super combat potions", "item": "Super combat potion(4)", "perHour": 2300},
-      {"task": "Mix {n} Saradomin brews", "item": "Saradomin brew(4)", "perHour": 2300},
-      {"task": "Mix {n} ranging potions", "item": "Ranging potion(4)", "perHour": 2300},
-      {"task": "Clean {n} grimy herbs by hand", "item": "Grimy ranarr weed", "perHour": 4500}
-    ]},
-    {"skill": "Crafting", "activities": [
-      {"task": "Craft {n} black d'hide bodies", "item": "Black d'hide body", "perHour": 1650},
-      {"task": "Assemble {n} battlestaves", "item": "Air battlestaff", "perHour": 2400},
-      {"task": "Cut {n} dragonstones", "item": "Dragonstone", "perHour": 2600, "consumes": "Uncut dragonstone"},
-      {"task": "Blow {n} unpowered orbs", "item": "Unpowered orb", "perHour": 1700}
-    ]},
-    {"skill": "Smithing", "activities": [
-      {"task": "Smelt {n} runite bars at the Blast Furnace", "item": "Runite bar", "perHour": 2500},
-      {"task": "Smelt {n} gold bars at the Blast Furnace", "item": "Gold bar", "perHour": 5000},
-      {"task": "Smith {n} adamant platebodies", "item": "Adamant platebody", "perHour": 170}
-    ]},
-    {"skill": "Prayer", "activities": [
-      {"task": "Offer {n} dragon bones at a gilded altar", "perHour": 2200, "consumes": "Dragon bones"},
-      {"task": "Offer {n} superior dragon bones at a gilded altar", "perHour": 2200, "consumes": "Superior dragon bones"},
-      {"task": "Offer {n} dragon bones at the Wilderness Chaos Altar", "perHour": 1200, "wilderness": true, "consumes": "Dragon bones"}
-    ]},
-    {"skill": "Magic", "activities": [
-      {"task": "Cast High Level Alchemy {n} times", "item": "Nature rune", "perHour": 1150},
-      {"task": "Plank Make {n} mahogany logs", "perHour": 1750, "consumes": "Mahogany logs"},
-      {"task": "Cast String Jewellery on {n} amulets", "perHour": 1500}
-    ]},
-    {"skill": "Construction", "activities": [
-      {"task": "Build (and remove) {n} mahogany tables", "perHour": 400, "consumes": "Mahogany plank", "consumesPer": 6},
-      {"task": "Build (and remove) {n} oak larders", "perHour": 420, "consumes": "Oak plank", "consumesPer": 8}
-    ]},
+    {"skill": "Cooking", "xp": {"perHour": 300000, "item": "Shark"}},
+    {"skill": "Firemaking", "xp": {"perHour": 300000, "item": "Magic logs"}},
+    {"skill": "Fletching", "xp": {"perHour": 200000, "item": "Magic longbow"}},
+    {"skill": "Herblore", "xp": {"perHour": 250000, "item": "Super combat potion(4)"}},
+    {"skill": "Crafting", "xp": {"perHour": 300000, "item": "Black d'hide body"}},
+    {"skill": "Smithing", "xp": {"perHour": 200000, "item": "Runite bar"}},
+    {"skill": "Magic", "xp": {"perHour": 150000, "item": "Nature rune"}},
+    {"skill": "Construction", "xp": {"perHour": 300000, "item": "Mahogany plank"}},
     {"skill": "Sailing", "activities": [
       {"task": "Complete {n} run{s} of the Tempor Tantrum Barracuda Trial", "perHour": 12},
       {"task": "Complete {n} run{s} of the Jubbly Jive Barracuda Trial", "perHour": 10},
