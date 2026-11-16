@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-11-10T01:23:25Z",
-  "fetched_date": "2026-11-10",
+  "fetched_at": "2026-11-16T13:41:30Z",
+  "fetched_date": "2026-11-16",
   "source": "OSRS Wiki real-time prices API (https://prices.runescape.wiki/api/v2/osrs)",
   "source_mode": "network",
-  "requests_made": 14,
+  "requests_made": 1,
   "items_tracked": 221,
   "items_priced": 157,
   "icons_bundled": 220,
